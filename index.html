@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Eid UL adha Mubarak!</title>
+    <style>
+        /* General Body & Layout - Dark Theme */
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column; /* Use column layout for top/bottom ads */
+            justify-content: flex-start; /* Align items from the start */
+            align-items: center;
+            min-height: 100vh;
+            /* Dark Festive Gradient Background */
+            background: linear-gradient(to bottom right, #1a1a1a, #000000); /* Dark gradient */
+            color: #e0e0e0; /* Default text color */
+            padding: 20px;
+            box-sizing: border-box;
+            line-height: 1.6;
+            overflow-x: hidden; /* Prevent horizontal scroll from fireworks */
+            position: relative; /* Needed for absolute positioning of fireworks */
+        }
+
+        /* Ad Container Styling */
+        .ad-container {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 20px; /* Space below top ad */
+            margin-top: 20px; /* Space above bottom ad */
+            z-index: 2; /* Ensure ads are above content and fireworks */
+        }
+
+        /* Main Content Container - Adapting to Dark Theme */
+        .container {
+            text-align: center;
+            background-color: #333333; /* Dark gray background for content */
+            padding: 30px;
+            border-radius: 15px; /* More rounded corners */
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.1); /* Lighter shadow for dark theme */
+            max-width: 550px; /* Slightly wider */
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 1; /* Ensure content is above fireworks */
+            border: 1px solid #555; /* Subtle border */
+            margin-bottom: 20px; /* Space above bottom ad */
+        }
+
+        /* GIF Styling */
+        .eid-gif {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+            border-radius: 10px; /* Rounded corners */
+            box-shadow: 0 4px 10px rgba(255, 255, 255, 0.08); /* Lighter shadow */
+            border: 3px solid #ffd700; /* Gold border for festive look */
+        }
+
+        /* Personalized Message Box - Adapting to Dark Theme */
+        .message-box {
+            margin-bottom: 25px;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #444444; /* Slightly lighter dark gray */
+            border: 1px solid #555555;
+            color: #e0e0e0; /* Light text color */
+            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.07); /* Lighter shadow */
+        }
+
+        .message-box h2 {
+            color: #66ccff; /* Vibrant light blue for greeting */
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 2em;
+            font-weight: bold;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5); /* Darker text shadow works on light text */
+        }
+
+        .message-box p {
+            color: #bbbbbb; /* Lighter gray for sender name */
+            font-size: 1.3em;
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+         /* Message above Name Input */
+        #initialWishMessage {
+            color: #ffffff; /* White text */
+            font-size: 1.4em; /* Slightly larger */
+            margin-bottom: 25px; /* Space below message */
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        /* Input Section - Adapting to Dark Theme */
+        .input-section {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px dashed #666666; /* Lighter dashed line */
+        }
+
+        #userName {
+            padding: 14px;
+            margin-right: 10px;
+            border: 1px solid #555; /* Dark border */
+            background-color: #2a2a2a; /* Very dark background for input */
+            color: #e0e0e0; /* Light text color */
+            border-radius: 5px;
+            font-size: 1.1em;
+            width: calc(100% - 160px);
+            max-width: 280px;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        #userName:focus {
+             border-color: #ffd700; /* Gold border on focus */
+             outline: none;
+             box-shadow: 0 0 6px rgba(255, 215, 0, 0.6); /* Gold shadow on focus */
+             background-color: #3a3a3a; /* Slightly lighter dark background on focus */
+        }
+        #userName::placeholder { /* Style placeholder text */
+            color: #aaaaaa;
+            opacity: 1; /* Ensure visibility */
+        }
+
+
+        #generateLink {
+            padding: 14px 20px;
+            background-color: #28a745; /* Keep WhatsApp green */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3); /* Dark shadow */
+        }
+        #generateLink:hover {
+            background-color: #218838;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        }
+         #generateLink:active {
+            transform: scale(0.98);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+        }
+
+        /* WhatsApp Share Button */
+        #whatsappShareBox {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #25D366; /* WhatsApp green */
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #whatsappShareBox:hover {
+             background-color: #1EBE57;
+             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        }
+        #whatsappShareBox:active {
+             transform: scale(0.98);
+             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+        }
+
+        #whatsappShareBox img {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+            filter: brightness(0) invert(1); /* Keep logo white */
+        }
+
+        #whatsappShareBox span {
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+
+        /* --- Animations --- */
+
+        /* Message Fade & Scale Animation */
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        .animated-message {
+            animation: fadeInScale 1.2s ease-out forwards;
+        }
+
+        /* Firework Particle Styles */
+        .firework-particle {
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            /* Keeping bright colors for particles */
+            background-color: var(--particle-color, #ffda77); /* Use CSS variable for color */
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0; /* Below the main content */
+            box-shadow: 0 0 4px var(--particle-color, #ffda77); /* Glowing effect matches color */
+            opacity: 0;
+        }
+
+        /* Firework Burst Animation - Random movement */
+        @keyframes fireworkBurst {
+             0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1);
+             }
+             50% {
+                 opacity: 1;
+             }
+             100% {
+                opacity: 0;
+                transform: translate(var(--dx, 0), var(--dy, 0)) scale(0.5);
+             }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Adsterra Ad Code (Top) -->
+    <div class="ad-container top-ad">
+        <script type="text/javascript">
+            atOptions = {
+                'key' : '3d43a842c228553bbce99198dae1a603',
+                'format' : 'iframe',
+                'height' : 50,
+                'width' : 320,
+                'params' : {}
+            };
+        </script>
+        <script type="text/javascript" src="//www.highperformanceformat.com/3d43a842c228553bbce99198dae1a603/invoke.js"></script>
+    </div>
+
+    <div class="container">
+        <!-- GIF Image -->
+        <img src="762j.gif" alt="Eid Mubarak Animation" class="eid-gif">
+
+        <!-- Personalized Message (Shown when name is in URL) -->
+        <div id="personalizedMessage" class="message-box" style="display: none;">
+            <h2 id="greetingText">Happy Eid UL adha Mubarak!</h2>
+            <p id="senderName"></p>
+        </div>
+
+        <!-- Initial Wish Message (Always visible above input) -->
+        <p id="initialWishMessage">Create your personalized Eid Mubarak wish!</p>
+
+        <!-- Name Input and Link Generation Section -->
+        <div id="nameInputSection" class="input-section">
+            <input type="text" id="userName" placeholder=" Enter your name here">
+            <button id="generateLink">Generate Wish Link</button>
+
+            <!-- WhatsApp Share Button (replaces the link display) -->
+            <div id="whatsappShareBox" style="display: none;">
+                 <!-- Using a commonly available WhatsApp icon URL -->
+                 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/WhatsApp_icon.png/598px-WhatsApp_icon.png" alt="WhatsApp Logo">
+                 <span>Share on WhatsApp</span>
+            </div>
+
+        </div>
+    </div>
+
+     <!-- Adsterra Ad Code (Bottom) -->
+     <div class="ad-container bottom-ad">
+        <script type="text/javascript">
+            atOptions = {
+                'key' : '3d43a842c228553bbce99198dae1a603',
+                'format' : 'iframe',
+                'height' : 50,
+                'width' : 320,
+                'params' : {}
+            };
+        </script>
+        <script type="text/javascript" src="//www.highperformanceformat.com/3d43a842c228553bbce99198dae1a603/invoke.js"></script>
+     </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const personalizedMessageDiv = document.getElementById('personalizedMessage');
+            const greetingTextElement = document.getElementById('greetingText');
+            const senderNameElement = document.getElementById('senderName');
+            const initialWishMessage = document.getElementById('initialWishMessage'); // Get the new message element
+            const nameInputSectionDiv = document.getElementById('nameInputSection');
+            const userNameInput = document.getElementById('userName');
+            const generateLinkButton = document.getElementById('generateLink');
+            const whatsappShareBox = document.getElementById('whatsappShareBox');
+            const container = document.querySelector('.container');
+
+            let generatedShareLink = '';
+
+            // Get 'name' parameter from URL
+            function getUrlParameter(name) {
+                name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+                const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+                const results = regex.exec(location.search);
+                return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+            }
+
+            // --- Firework Function ---
+            function createFirework(x, y, numParticles = 50) {
+                const colors = [
+                    '#ffda77', '#ffd700', '#ffe4b5', '#fffacd', // Golds/Yellows
+                    '#ff6347', '#ff4500', // Reds/Oranges
+                    '#40e0d0', '#00ffff', // Turquoises/Cyans
+                    '#9370db', '#ba55d3', // Medium Purples
+                    '#ffb6c1', '#dda0dd', // Pink/Plum
+                    '#adff2f', '#7fff00'  // Green/Chartreuse
+                ]; // Even more colors!
+                const burstRadius = 150; // Increased spread again
+
+                for (let i = 0; i < numParticles; i++) {
+                    const particle = document.createElement('div');
+                    particle.classList.add('firework-particle');
+
+                    // Set initial position
+                    particle.style.left = `${x}px`;
+                    particle.style.top = `${y}px`;
+
+                    // Calculate random direction and distance
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = Math.random() * burstRadius * 0.8 + burstRadius * 0.2;
+
+                    const dx = Math.cos(angle) * distance;
+                    const dy = Math.sin(angle) * distance;
+
+                     // Apply random color and set CSS variable
+                    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                    particle.style.setProperty('--particle-color', randomColor);
+
+
+                    // Set final position using CSS variables
+                    particle.style.setProperty('--dx', `${dx}px`);
+                    particle.style.setProperty('--dy', `${dy}px`);
+
+
+                    // Set animation duration and delay
+                    const duration = 1 + Math.random() * 1; // Duration up to 2s
+                    const delay = Math.random() * 0.8; // Increased max delay
+                    particle.style.animation = `fireworkBurst ${duration}s ease-out ${delay}s forwards`;
+
+                    document.body.appendChild(particle);
+
+                    particle.addEventListener('animationend', () => {
+                        particle.remove();
+                    });
+                }
+            }
+
+             // --- Trigger Significantly More Fireworks ---
+            function triggerMultipleFireworks() {
+                const containerRect = container.getBoundingClientRect();
+                const baseX = containerRect.left + containerRect.width / 2;
+                const baseY = containerRect.top + containerRect.height * 0.3;
+
+                const numberOfBursts = 40 + Math.floor(Math.random() * 15); // Randomly between 40 and 54 bursts
+                const particlesPerBurst = 60 + Math.floor(Math.random() * 30); // Randomly between 60 and 89 particles per burst
+
+                for (let i = 0; i < numberOfBursts; i++) {
+                    // Add more randomness to burst position spread wider
+                    const offsetX = (Math.random() - 0.5) * (containerRect.width * 0.8); // Spread horizontally wider
+                    const offsetY = (Math.random() - 0.5) * (containerRect.height * 0.6); // Spread vertically wider
+
+                    const burstX = baseX + offsetX;
+                    const burstY = baseY + offsetY;
+
+                    // Stagger the bursts over time
+                    const burstDelay = i * 80; // Shorter delay between bursts for a faster overall sequence
+
+                     setTimeout(() => {
+                        createFirework(burstX, burstY, particlesPerBurst);
+                     }, 800 + burstDelay); // Start delay after message shows + stagger
+                }
+            }
+
+
+            const senderName = getUrlParameter('name');
+
+            // Check if 'name' parameter is present in the URL (even if it's empty)
+            if (window.location.search.includes('name=')) {
+                 // If name parameter is in the URL (it's a shared link)
+                personalizedMessageDiv.style.display = 'block'; // Show the wish message
+                initialWishMessage.style.display = 'none'; // Hide the initial wish message
+
+                // Use the name from URL, or "A Friend" if the name was empty
+                const displaySenderName = senderName || "A Friend";
+                senderNameElement.textContent = `From: ${displaySenderName}`; // This text appears on the opened page
+
+                // Animate the message box
+                personalizedMessageDiv.classList.add('animated-message');
+
+                // Trigger the increased number of Fireworks
+                triggerMultipleFireworks();
+
+                // The name input section will always be visible below the message
+                nameInputSectionDiv.style.display = 'block';
+
+            } else {
+                // If name is NOT in the URL (it's opened directly without a name param)
+                personalizedMessageDiv.style.display = 'none'; // Hide the personalized wish message
+                initialWishMessage.style.display = 'block'; // Show the initial wish message
+                nameInputSectionDiv.style.display = 'block'; // Show the input section
+
+                senderNameElement.textContent = ''; // Clear sender name initially
+            }
+
+            // --- Link Generation Logic (Always available below) ---
+            generateLinkButton.addEventListener('click', () => {
+                const name = userNameInput.value.trim(); // Get name and remove leading/trailing whitespace
+
+                if (name) {
+                    const encodedName = encodeURIComponent(name);
+                    const currentUrlBase = window.location.origin + window.location.pathname;
+                    generatedShareLink = `${currentUrlBase}?name=${encodedName}`; // Store the generated link
+
+                    // Hide the generate button and initial input wish message
+                    generateLinkButton.style.display = 'none';
+                    initialWishMessage.style.display = 'none';
+                     // Optional: Hide input box too
+                     // userNameInput.style.display = 'none';
+
+
+                    // Show the WhatsApp share button
+                    whatsappShareBox.style.display = 'flex';
+
+
+                     // Optional: Scroll to the share button if it's off-screen
+                     whatsappShareBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+
+                } else {
+                    alert("Please enter your name first.");
+                }
+            });
+
+            // --- WhatsApp Share Button Logic ---
+            whatsappShareBox.addEventListener('click', () => {
+                 if (generatedShareLink) {
+                    // Get the name that was entered by the user
+                    const nameToShare = userNameInput.value.trim() || 'Someone'; // Use entered name, default to 'Someone' if somehow empty
+
+                    // ** MODIFIED SHARE TEXT HERE **
+                    // This constructs the message dynamically using the entered name
+                    const shareText = `${nameToShare} from Happy Eid UL adha Mubarak advance and open your gift click Link and share your 10 best friend`;
+
+                    const encodedShareText = encodeURIComponent(shareText);
+                    const encodedShareLink = encodeURIComponent(generatedShareLink);
+
+                    // Construct the WhatsApp share URL
+                    // %0A%0A adds two newlines (a space) between the text and the link
+                    const whatsappUrl = `whatsapp://send?text=${encodedShareText}%0A%0A${encodedShareLink}`;
+
+                    // Attempt to open the WhatsApp link
+                    window.location.href = whatsappUrl;
+
+                 } else {
+                     alert("Please generate the link first by entering your name.");
+                 }
+            });
+
+
+            // Optional: Add a subtle initial animation to the container when page loads
+             container.style.opacity = 0;<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Eid UL adha Mubarak!</title>
+    <style>
+        /* General Body & Layout - Dark Theme */
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column; /* Use column layout for top/bottom ads */
+            justify-content: flex-start; /* Align items from the start */
+            align-items: center;
+            min-height: 100vh;
+            /* Dark Festive Gradient Background */
+            background: linear-gradient(to bottom right, #1a1a1a, #000000); /* Dark gradient */
+            color: #e0e0e0; /* Default text color */
+            padding: 20px;
+            box-sizing: border-box;
+            line-height: 1.6;
+            overflow-x: hidden; /* Prevent horizontal scroll from fireworks */
+            position: relative; /* Needed for absolute positioning of fireworks */
+        }
+
+        /* Ad Container Styling */
+        .ad-container {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 20px; /* Space below top ad */
+            margin-top: 20px; /* Space above bottom ad */
+            z-index: 2; /* Ensure ads are above content and fireworks */
+        }
+
+        /* Main Content Container - Adapting to Dark Theme */
+        .container {
+            text-align: center;
+            background-color: #333333; /* Dark gray background for content */
+            padding: 30px;
+            border-radius: 15px; /* More rounded corners */
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.1); /* Lighter shadow for dark theme */
+            max-width: 550px; /* Slightly wider */
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 1; /* Ensure content is above fireworks */
+            border: 1px solid #555; /* Subtle border */
+            margin-bottom: 20px; /* Space above bottom ad */
+        }
+
+        /* GIF Styling */
+        .eid-gif {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+            border-radius: 10px; /* Rounded corners */
+            box-shadow: 0 4px 10px rgba(255, 255, 255, 0.08); /* Lighter shadow */
+            border: 3px solid #ffd700; /* Gold border for festive look */
+        }
+
+        /* Personalized Message Box - Adapting to Dark Theme */
+        .message-box {
+            margin-bottom: 25px;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #444444; /* Slightly lighter dark gray */
+            border: 1px solid #555555;
+            color: #e0e0e0; /* Light text color */
+            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.07); /* Lighter shadow */
+        }
+
+        .message-box h2 {
+            color: #66ccff; /* Vibrant light blue for greeting */
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 2em;
+            font-weight: bold;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5); /* Darker text shadow works on light text */
+        }
+
+        .message-box p {
+            color: #bbbbbb; /* Lighter gray for sender name */
+            font-size: 1.3em;
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+         /* Message above Name Input */
+        #initialWishMessage {
+            color: #ffffff; /* White text */
+            font-size: 1.4em; /* Slightly larger */
+            margin-bottom: 25px; /* Space below message */
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        /* Input Section - Adapting to Dark Theme */
+        .input-section {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px dashed #666666; /* Lighter dashed line */
+        }
+
+        #userName {
+            padding: 14px;
+            margin-right: 10px;
+            border: 1px solid #555; /* Dark border */
+            background-color: #2a2a2a; /* Very dark background for input */
+            color: #e0e0e0; /* Light text color */
+            border-radius: 5px;
+            font-size: 1.1em;
+            width: calc(100% - 160px);
+            max-width: 280px;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        #userName:focus {
+             border-color: #ffd700; /* Gold border on focus */
+             outline: none;
+             box-shadow: 0 0 6px rgba(255, 215, 0, 0.6); /* Gold shadow on focus */
+             background-color: #3a3a3a; /* Slightly lighter dark background on focus */
+        }
+        #userName::placeholder { /* Style placeholder text */
+            color: #aaaaaa;
+            opacity: 1; /* Ensure visibility */
+        }
+
+
+        #generateLink {
+            padding: 14px 20px;
+            background-color: #28a745; /* Keep WhatsApp green */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3); /* Dark shadow */
+        }
+        #generateLink:hover {
+            background-color: #218838;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        }
+         #generateLink:active {
+            transform: scale(0.98);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+        }
+
+        /* WhatsApp Share Button */
+        #whatsappShareBox {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #25D366; /* WhatsApp green */
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #whatsappShareBox:hover {
+             background-color: #1EBE57;
+             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        }
+        #whatsappShareBox:active {
+             transform: scale(0.98);
+             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+        }
+
+        #whatsappShareBox img {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+            filter: brightness(0) invert(1); /* Keep logo white */
+        }
+
+        #whatsappShareBox span {
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+
+        /* --- Animations --- */
+
+        /* Message Fade & Scale Animation */
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        .animated-message {
+            animation: fadeInScale 1.2s ease-out forwards;
+        }
+
+        /* Firework Particle Styles */
+        .firework-particle {
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            /* Keeping bright colors for particles */
+            background-color: var(--particle-color, #ffda77); /* Use CSS variable for color */
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0; /* Below the main content */
+            box-shadow: 0 0 4px var(--particle-color, #ffda77); /* Glowing effect matches color */
+            opacity: 0;
+        }
+
+        /* Firework Burst Animation - Random movement */
+        @keyframes fireworkBurst {
+             0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1);
+             }
+             50% {
+                 opacity: 1;
+             }
+             100% {
+                opacity: 0;
+                transform: translate(var(--dx, 0), var(--dy, 0)) scale(0.5);
+             }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Adsterra Ad Code (Top) -->
+    <div class="ad-container top-ad">
+        <script type="text/javascript">
+            atOptions = {
+                'key' : '3d43a842c228553bbce99198dae1a603',
+                'format' : 'iframe',
+                'height' : 50,
+                'width' : 320,
+                'params' : {}
+            };
+        </script>
+        <script type="text/javascript" src="//www.highperformanceformat.com/3d43a842c228553bbce99198dae1a603/invoke.js"></script>
+    </div>
+
+    <div class="container">
+        <!-- GIF Image -->
+        <img src="762j.gif" alt="Eid Mubarak Animation" class="eid-gif">
+
+        <!-- Personalized Message (Shown when name is in URL) -->
+        <div id="personalizedMessage" class="message-box" style="display: none;">
+            <h2 id="greetingText">Happy Eid UL adha Mubarak!</h2>
+            <p id="senderName"></p>
+        </div>
+
+        <!-- Initial Wish Message (Always visible above input) -->
+        <p id="initialWishMessage">Create your personalized Eid Mubarak wish!</p>
+
+        <!-- Name Input and Link Generation Section -->
+        <div id="nameInputSection" class="input-section">
+            <input type="text" id="userName" placeholder=" Enter your name here">
+            <button id="generateLink">Generate Wish Link</button>
+
+            <!-- WhatsApp Share Button (replaces the link display) -->
+            <div id="whatsappShareBox" style="display: none;">
+                 <!-- Using a commonly available WhatsApp icon URL -->
+                 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/WhatsApp_icon.png/598px-WhatsApp_icon.png" alt="WhatsApp Logo">
+                 <span>Share on WhatsApp</span>
+            </div>
+
+        </div>
+    </div>
+
+     <!-- Adsterra Ad Code (Bottom) -->
+     <div class="ad-container bottom-ad">
+        <script type="text/javascript">
+            atOptions = {
+                'key' : '3d43a842c228553bbce99198dae1a603',
+                'format' : 'iframe',
+                'height' : 50,
+                'width' : 320,
+                'params' : {}
+            };
+        </script>
+        <script type="text/javascript" src="//www.highperformanceformat.com/3d43a842c228553bbce99198dae1a603/invoke.js"></script>
+     </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const personalizedMessageDiv = document.getElementById('personalizedMessage');
+            const greetingTextElement = document.getElementById('greetingText');
+            const senderNameElement = document.getElementById('senderName');
+            const initialWishMessage = document.getElementById('initialWishMessage'); // Get the new message element
+            const nameInputSectionDiv = document.getElementById('nameInputSection');
+            const userNameInput = document.getElementById('userName');
+            const generateLinkButton = document.getElementById('generateLink');
+            const whatsappShareBox = document.getElementById('whatsappShareBox');
+            const container = document.querySelector('.container');
+
+            let generatedShareLink = '';
+
+            // Get 'name' parameter from URL
+            function getUrlParameter(name) {
+                name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+                const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+                const results = regex.exec(location.search);
+                return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+            }
+
+            // --- Firework Function ---
+            function createFirework(x, y, numParticles = 50) {
+                const colors = [
+                    '#ffda77', '#ffd700', '#ffe4b5', '#fffacd', // Golds/Yellows
+                    '#ff6347', '#ff4500', // Reds/Oranges
+                    '#40e0d0', '#00ffff', // Turquoises/Cyans
+                    '#9370db', '#ba55d3', // Medium Purples
+                    '#ffb6c1', '#dda0dd', // Pink/Plum
+                    '#adff2f', '#7fff00'  // Green/Chartreuse
+                ]; // Even more colors!
+                const burstRadius = 150; // Increased spread again
+
+                for (let i = 0; i < numParticles; i++) {
+                    const particle = document.createElement('div');
+                    particle.classList.add('firework-particle');
+
+                    // Set initial position
+                    particle.style.left = `${x}px`;
+                    particle.style.top = `${y}px`;
+
+                    // Calculate random direction and distance
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = Math.random() * burstRadius * 0.8 + burstRadius * 0.2;
+
+                    const dx = Math.cos(angle) * distance;
+                    const dy = Math.sin(angle) * distance;
+
+                     // Apply random color and set CSS variable
+                    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                    particle.style.setProperty('--particle-color', randomColor);
+
+
+                    // Set final position using CSS variables
+                    particle.style.setProperty('--dx', `${dx}px`);
+                    particle.style.setProperty('--dy', `${dy}px`);
+
+
+                    // Set animation duration and delay
+                    const duration = 1 + Math.random() * 1; // Duration up to 2s
+                    const delay = Math.random() * 0.8; // Increased max delay
+                    particle.style.animation = `fireworkBurst ${duration}s ease-out ${delay}s forwards`;
+
+                    document.body.appendChild(particle);
+
+                    particle.addEventListener('animationend', () => {
+                        particle.remove();
+                    });
+                }
+            }
+
+             // --- Trigger Significantly More Fireworks ---
+            function triggerMultipleFireworks() {
+                const containerRect = container.getBoundingClientRect();
+                const baseX = containerRect.left + containerRect.width / 2;
+                const baseY = containerRect.top + containerRect.height * 0.3;
+
+                const numberOfBursts = 40 + Math.floor(Math.random() * 15); // Randomly between 40 and 54 bursts
+                const particlesPerBurst = 60 + Math.floor(Math.random() * 30); // Randomly between 60 and 89 particles per burst
+
+                for (let i = 0; i < numberOfBursts; i++) {
+                    // Add more randomness to burst position spread wider
+                    const offsetX = (Math.random() - 0.5) * (containerRect.width * 0.8); // Spread horizontally wider
+                    const offsetY = (Math.random() - 0.5) * (containerRect.height * 0.6); // Spread vertically wider
+
+                    const burstX = baseX + offsetX;
+                    const burstY = baseY + offsetY;
+
+                    // Stagger the bursts over time
+                    const burstDelay = i * 80; // Shorter delay between bursts for a faster overall sequence
+
+                     setTimeout(() => {
+                        createFirework(burstX, burstY, particlesPerBurst);
+                     }, 800 + burstDelay); // Start delay after message shows + stagger
+                }
+            }
+
+
+            const senderName = getUrlParameter('name');
+
+            // Check if 'name' parameter is present in the URL (even if it's empty)
+            if (window.location.search.includes('name=')) {
+                 // If name parameter is in the URL (it's a shared link)
+                personalizedMessageDiv.style.display = 'block'; // Show the wish message
+                initialWishMessage.style.display = 'none'; // Hide the initial wish message
+
+                // Use the name from URL, or "A Friend" if the name was empty
+                const displaySenderName = senderName || "A Friend";
+                senderNameElement.textContent = `From: ${displaySenderName}`; // This text appears on the opened page
+
+                // Animate the message box
+                personalizedMessageDiv.classList.add('animated-message');
+
+                // Trigger the increased number of Fireworks
+                triggerMultipleFireworks();
+
+                // The name input section will always be visible below the message
+                nameInputSectionDiv.style.display = 'block';
+
+            } else {
+                // If name is NOT in the URL (it's opened directly without a name param)
+                personalizedMessageDiv.style.display = 'none'; // Hide the personalized wish message
+                initialWishMessage.style.display = 'block'; // Show the initial wish message
+                nameInputSectionDiv.style.display = 'block'; // Show the input section
+
+                senderNameElement.textContent = ''; // Clear sender name initially
+            }
+
+            // --- Link Generation Logic (Always available below) ---
+            generateLinkButton.addEventListener('click', () => {
+                const name = userNameInput.value.trim(); // Get name and remove leading/trailing whitespace
+
+                if (name) {
+                    const encodedName = encodeURIComponent(name);
+                    const currentUrlBase = window.location.origin + window.location.pathname;
+                    generatedShareLink = `${currentUrlBase}?name=${encodedName}`; // Store the generated link
+
+                    // Hide the generate button and initial input wish message
+                    generateLinkButton.style.display = 'none';
+                    initialWishMessage.style.display = 'none';
+                     // Optional: Hide input box too
+                     // userNameInput.style.display = 'none';
+
+
+                    // Show the WhatsApp share button
+                    whatsappShareBox.style.display = 'flex';
+
+
+                     // Optional: Scroll to the share button if it's off-screen
+                     whatsappShareBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+
+                } else {
+                    alert("Please enter your name first.");
+                }
+            });
+
+            // --- WhatsApp Share Button Logic ---
+            whatsappShareBox.addEventListener('click', () => {
+                 if (generatedShareLink) {
+                    // Get the name that was entered by the user
+                    const nameToShare = userNameInput.value.trim() || 'Someone'; // Use entered name, default to 'Someone' if somehow empty
+
+                    // ** MODIFIED SHARE TEXT HERE **
+                    // This constructs the message dynamically using the entered name
+                    const shareText = `${nameToShare} from Happy Eid UL adha Mubarak advance and open your gift click Link and share your 10 best friend`;
+
+                    const encodedShareText = encodeURIComponent(shareText);
+                    const encodedShareLink = encodeURIComponent(generatedShareLink);
+
+                    // Construct the WhatsApp share URL
+                    // %0A%0A adds two newlines (a space) between the text and the link
+                    const whatsappUrl = `whatsapp://send?text=${encodedShareText}%0A%0A${encodedShareLink}`;
+
+                    // Attempt to open the WhatsApp link
+                    window.location.href = whatsappUrl;
+
+                 } else {
+                     alert("Please generate the link first by entering your name.");
+                 }
+            });
+
+
+            // Optional: Add a subtle initial animation to the container when page loads
+             container.style.opacity = 0;
+             container.style.transform = 'translateY(20px)';
+             setTimeout(() => {
+                 container.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
+                 container.style.opacity = 1;
+                 container.style.transform = 'translateY(0)';
+             }, 100);
+        });
+    </script>
+
+</body>
+</html>
