@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Pending Payments</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="toast-container"></div>
+<header>  
+    <span class="header-brand">Pending Payments</span>  
+    <a href="../admin-panel.html" class="btn btn-outline btn-sm"><i class="fas fa-arrow-left"></i> Back to Admin</a>  
+</header>
+<main id="main-content" style="max-width:750px; margin-top:20px;">
+    <div id="payments-list"></div>
+</main>
+<script type="module">
+    import { auth, db, ref, onValue, get, set, update, onAuthStateChanged, ADMIN_EMAIL } from "../js/firebase-config.js";
+    import { showToast } from "../js/common.js";
+
+    let allLiveClasses = [];
+
+    onAuthStateChanged(auth, user => {
+        if(!user || user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) window.location.href = '../index.html';
+    });
+
+    onValue(ref(db, 'live_classes'), snap => {
+        allLiveClasses = [];
+        if(snap.exists()) snap.forEach(c => allLiveClasses.push({ id: c.key, ...c.val() }));
+    });
+
+    onValue(ref(db, 'payment_requests'), snap => {
+        const list = document.getElementById('payments-list');
+        let html = "";
+        if(snap.exists()) {
+            snap.forEach(c => {
+                const req = { id: c.key, ...c.val() };
+                if(req.status === 'pending') {
+                    html += `
+                        <div class="card card-body" style="margin-bottom:14px;">  
+                            <p><strong>Item:</strong> ${req.itemName} <span class="badge">${req.itemType?.toUpperCase()}</span></p>  
+                            <p><strong>User Email:</strong> ${req.email}</p>  
+                            <p><strong>Transaction ID (TID):</strong> ${req.transactionId}</p>  
+                            <p><strong>Amount:</strong> Rs ${req.amount}</p>  
+                            <a href="${req.screenshotUrl}" target="_blank" style="color:var(--primary); font-weight:600; margin:6px 0; display:inline-block;">View Payment Screenshot</a>  
+                            <div style="display:flex; gap:10px; margin-top:10px;">  
+                                <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="window.approvePay('${req.id}', '${req.uid}', '${req.itemId}', '${req.itemType || 'course'}', '${req.instructorId || 'admin'}', ${req.amount || 0})">Approve & Split</button>  
+                                <button class="btn btn-danger btn-sm" style="flex:1;" onclick="window.rejectPay('${req.id}')">Reject</button>  
+                            </div>  
+                        </div>  
+                    `;
+                }
+            });
+        }
+        list.innerHTML = html || '<p style="padding:20px; text-align:center;">No pending payments right now.</p>';
+    });
+
+    window.approvePay = async function(reqId, uid, itemId, itemType, instructorId, amount) {
+        await update(ref(db, `payment_requests/${reqId}`), { status: 'approved', resolvedAt: Date.now() });
+
+        if(itemType === 'course') {
+            await set(ref(db, `course_access/${uid}/${itemId}`), {
+                courseId: itemId, accessType: 'lifetime', status: 'active', grantedAt: Date.now(), paymentId: reqId
+            });
+            if(instructorId && instructorId !== 'admin') {
+                const teacherShare = Math.round(Number(amount) * 0.40);
+                const wRef = ref(db, `teacher_wallets/${instructorId}/balance`);
+                const snap = await get(wRef);
+                const bal = snap.exists() ? snap.val() : 0;
+                await set(wRef, bal + teacherShare);
+            }
+        } else if(itemType === 'live') {
+            const liveObj = allLiveClasses.find(c => c.id === itemId);
+            let expiresAt = 0;
+            if(liveObj && liveObj.validity) {
+                const now = Date.now();
+                const day = 24 * 60 * 60 * 1000;
+                if(liveObj.validity === '1 Month') expiresAt = now + (30 * day);
+                else if(liveObj.validity === '3 Months') expiresAt = now + (90 * day);
+                else if(liveObj.validity === '6 Months') expiresAt = now + (180 * day);
+                else if(liveObj.validity === '1 Year') expiresAt = now + (365 * day);
+            }
+            await set(ref(db, `live_access/${uid}/${itemId}`), {
+                classId: itemId, status: 'active', grantedAt: Date.now(), expiresAt, paymentId: reqId
+            });
+            if(instructorId && instructorId !== 'admin') {
+                const teacherShare = Math.round(Number(amount) * 0.60);
+                const wRef = ref(db, `teacher_wallets/${instructorId}/balance`);
+                const snap = await get(wRef);
+                const bal = snap.exists() ? snap.val() : 0;
+                await set(wRef, bal + teacherShare);
+            }
+        } else if(itemType === 'pdf') {
+            await set(ref(db, `pdf_access/${uid}/${itemId}`), { bookId: itemId, status: 'active', grantedAt: Date.now(), paymentId: reqId });
+        } else if(itemType === 'package') {
+            await update(ref(db, `users/${uid}`), { lifetimePdfAccess: true });
+        } else if(itemType === 'all_courses_package') {
+            await update(ref(db, `users/${uid}`), { lifetimeAllCoursesAccess: true });
+        }
+
+        showToast("Payment Approved & Revenue Share Split!", "success");
+    };
+
+    window.rejectPay = async function(reqId) {
+        await update(ref(db, `payment_requests/${reqId}`), { status: 'rejected' });
+        showToast("Payment Rejected", "info");
+    };
+</script>
+</body>
+</html>
