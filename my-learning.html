@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MDA - My Learning</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="global-loader"><div class="spinner"></div><div style="margin-top:10px;font-weight:500;">Loading...</div></div>  
+<div id="toast-container"></div>  
+
+<div id="app-container">  
+    <nav id="bottom-nav">  
+        <a class="nav-item" href="index.html"><i class="fas fa-home"></i>Home</a>  
+        <a class="nav-item" href="explore.html"><i class="fas fa-compass"></i>Explore</a>  
+        <a class="nav-item" href="books.html"><i class="fas fa-book"></i>E-Books</a>  
+        <a class="nav-item active" href="my-learning.html"><i class="fas fa-book-open"></i>My Learning</a>  
+        <a class="nav-item" href="community.html"><i class="fas fa-users"></i>Community</a>  
+        <a class="nav-item" href="profile.html"><i class="fas fa-user"></i>Profile</a>  
+    </nav>  
+
+    <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">  
+        <header>  
+            <a href="index.html" class="header-brand">MDA Mustafa Digital Academy</a>  
+            <div>
+                <a href="profile.html" style="color:var(--text-muted); font-size:20px; text-decoration:none;"><i class="fas fa-user-circle"></i></a>
+            </div>  
+        </header>  
+
+        <main id="main-content">  
+            <h2 style="margin-bottom: 16px;">My Learning (Enrolled Courses)</h2>  
+            <div id="my-courses-list" class="grid-cards"></div>  
+        </main>  
+    </div>  
+</div>  
+
+<script type="module">
+    import { auth, db, ref, onValue, get, onAuthStateChanged } from "./js/firebase-config.js";
+    import { showLoader, hideLoader } from "./js/common.js";
+    import { resolveImageUrl } from "./js/img-uploader.js";
+
+    let currentUser = null;
+    let allCourses = [];
+    let hasAllCoursesAccess = false;
+    let userAccessList = {};
+
+    showLoader();
+
+    onAuthStateChanged(auth, async (user) => {
+        currentUser = user;
+        const container = document.getElementById('my-courses-list');
+
+        if(!user) {
+            container.innerHTML = `  
+                <div style="grid-column: 1/-1; text-align:center; padding: 40px 10px;">  
+                    <p style="color:var(--text-muted); margin-bottom:16px;">Please login to view your enrolled courses.</p>  
+                    <button class="btn btn-primary" onclick="window.location.href='login.html'">Login Now</button>  
+                </div>`;
+            hideLoader();
+            return;
+        }
+
+        const uSnap = await get(ref(db, `users/${user.uid}`));
+        if(uSnap.exists()) hasAllCoursesAccess = uSnap.val().lifetimeAllCoursesAccess === true;
+
+        onValue(ref(db, `course_access/${user.uid}`), (snap) => {
+            userAccessList = snap.exists() ? snap.val() : {};
+            renderMyCourses();
+        });
+    });
+
+    onValue(ref(db, 'courses'), (snap) => {
+        allCourses = [];
+        if(snap.exists()) {
+            snap.forEach(c => allCourses.push({ id: c.key, ...c.val() }));
+        }
+        if(currentUser) renderMyCourses();
+        hideLoader();
+    }, () => hideLoader());
+
+    function renderMyCourses() {
+        const container = document.getElementById('my-courses-list');
+        if(!container) return;
+
+        let enrolled = allCourses.filter(course => {
+            return hasAllCoursesAccess || (userAccessList[course.id] && userAccessList[course.id].status === 'active');
+        });
+
+        if(enrolled.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column: 1/-1; text-align:center; padding: 40px 10px;">
+                    <p style="color:var(--text-muted); margin-bottom:16px;">You haven't enrolled in any courses yet.</p>
+                    <button class="btn btn-primary" onclick="window.location.href='explore.html'">Browse Courses</button>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = enrolled.map(course => {
+            const img = resolveImageUrl(course.thumbnail, 'course');
+            const layoutClass = course.layout === 'full' ? 'card-full' : '';
+            return `
+                <div class="card ${layoutClass}" onclick="window.location.href='lessons.html?id=${course.id}'">
+                    <img class="card-img" src="${img}" alt="Thumb">
+                    <div class="card-body">
+                        <div>
+                            <span class="badge badge-free" style="margin-bottom:6px;"><i class="fas fa-check"></i> Enrolled</span>
+                            <div class="card-title">${course.title}</div>
+                            <div class="instructor-name">By: ${course.instructorName || 'Mustafa Digital Academy'}</div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" style="width:100%; margin-top:10px;">
+                            <i class="fas fa-play"></i> Continue Learning
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+</script>
+</body>
+</html>
