@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MDA - Community</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="global-loader"><div class="spinner"></div><div style="margin-top:10px;font-weight:500;">Loading...</div></div>  
+<div id="toast-container"></div>  
+
+<div id="app-container">  
+    <nav id="bottom-nav">  
+        <a class="nav-item" href="index.html"><i class="fas fa-home"></i>Home</a>  
+        <a class="nav-item" href="explore.html"><i class="fas fa-compass"></i>Explore</a>  
+        <a class="nav-item" href="books.html"><i class="fas fa-book"></i>E-Books</a>  
+        <a class="nav-item" href="my-learning.html"><i class="fas fa-book-open"></i>My Learning</a>  
+        <a class="nav-item active" href="community.html"><i class="fas fa-users"></i>Community</a>  
+        <a class="nav-item" href="profile.html"><i class="fas fa-user"></i>Profile</a>  
+    </nav>  
+
+    <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">  
+        <header>  
+            <a href="index.html" class="header-brand">MDA Mustafa Digital Academy</a>  
+            <div>
+                <a href="profile.html" style="color:var(--text-muted); font-size:20px; text-decoration:none;"><i class="fas fa-user-circle"></i></a>
+            </div>  
+        </header>  
+
+        <main id="main-content">  
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">  
+                <h2>Community</h2>  
+                <button class="btn btn-primary" id="btn-open-post-modal"><i class="fas fa-plus"></i> Post</button>  
+            </div>  
+            <div id="community-feed"></div>  
+            <div id="community-loader" style="text-align:center; padding:10px; color:var(--text-muted); font-size:14px; display:none;">Loading more...</div>  
+        </main>  
+    </div>  
+</div>  
+
+<!-- پوسٹ تخلیق موڈل -->
+<div id="modal-add-post" class="modal-overlay">  
+    <div class="modal-content">  
+        <div class="modal-header">  
+            <h3>Create Post</h3>  
+            <button class="close-modal" onclick="closeTopModal()">&times;</button>  
+        </div>  
+        <div class="modal-body">  
+            <div class="input-group">  
+                <label>Description (Max 300 words)</label>  
+                <textarea id="cp-text" rows="4" required placeholder="What's on your mind?"></textarea>  
+                <small id="word-count-hint" style="color:var(--text-muted); font-size:11px;">0 / 300 words</small>  
+            </div>  
+            <div class="input-group">
+                <label>Attach Image (Optional)</label>
+                <input type="file" id="cp-image" accept="image/*">
+            </div>  
+            <div class="input-group hidden" id="cp-admin-fakelikes">  
+                <label>Initial Fake Likes (Admin Only)</label>  
+                <input type="number" id="cp-fakelikes" value="0">  
+            </div>  
+            <button type="button" class="btn btn-primary" id="btn-submit-post" style="width:100%;">Post to Community</button>  
+        </div>  
+    </div>  
+</div>  
+
+<script type="module">
+    import { auth, db, ref, onValue, set, remove, push, onAuthStateChanged, ADMIN_EMAIL } from "./js/firebase-config.js";
+    import { showToast, showLoader, hideLoader, openModal, closeTopModal } from "./js/common.js";
+    import { uploadToImgBB, setImgBbKey } from "./js/img-uploader.js";
+
+    let currentUser = null;
+    let allCommunityPosts = [];
+    let visibleLimit = 10;
+    let userSavedPosts = {};
+
+    showLoader();
+
+    onAuthStateChanged(auth, (user) => {
+        currentUser = user;
+        const isAdmin = user && user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+        const fakeLikesBox = document.getElementById('cp-admin-fakelikes');
+        if(isAdmin) fakeLikesBox.classList.remove('hidden');
+
+        if(user) {
+            onValue(ref(db, `users/${user.uid}/saved`), (snap) => {
+                userSavedPosts = snap.exists() ? snap.val() : {};
+                renderFeed();
+            });
+        }
+    });
+
+    onValue(ref(db, 'settings'), (snap) => {
+        if(snap.exists()) setImgBbKey(snap.val().imgbb_api_key || "");
+    });
+
+    onValue(ref(db, 'community'), (snap) => {
+        allCommunityPosts = [];
+        if(snap.exists()) {
+            snap.forEach(c => allCommunityPosts.push({ id: c.key, ...c.val() }));
+            allCommunityPosts.sort((a,b) => b.timestamp - a.timestamp);
+        }
+        renderFeed();
+        hideLoader();
+    }, () => hideLoader());
+
+    function renderFeed() {
+        const feed = document.getElementById('community-feed');
+        if(!feed) return;
+
+        if(allCommunityPosts.length === 0) {
+            feed.innerHTML = '<p style="text-align:center;color:var(--text-muted); padding:30px;">No posts yet. Be the first to share something!</p>';
+            return;
+        }
+
+        feed.innerHTML = allCommunityPosts.slice(0, visibleLimit).map(p => {
+            const totalLikes = (Number(p.fakeLikes) || 0) + (p.likes ? Object.keys(p.likes).length : 0);
+            const hasLiked = currentUser && p.likes && p.likes[currentUser.uid];
+            const hasSaved = currentUser && userSavedPosts[p.id];
+
+            return `
+                <div class="card card-body" style="margin-bottom:16px; box-shadow:0 1px 4px rgba(0,0,0,0.08);">  
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">  
+                        <div style="width:36px; height:36px; border-radius:50%; background:var(--primary); color:white; display:flex; justify-content:center; align-items:center; font-weight:bold;">
+                            ${p.authorName ? p.authorName.charAt(0).toUpperCase() : 'U'}
+                        </div>  
+                        <div>  
+                            <div style="font-weight:600; font-size:14px;">${p.authorName}</div>  
+                            <div style="font-size:11px; color:var(--text-muted);">${new Date(p.timestamp).toLocaleString()}</div>  
+                        </div>  
+                    </div>  
+                    <p style="font-size:14px; margin-bottom:10px; line-height:1.5;">${p.text}</p>  
+                    ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:100%; border-radius:8px; margin-bottom:10px;">` : ''}  
+                    <div style="display:flex; justify-content:space-between; border-top:1px solid var(--border-color); padding-top:8px; margin-top:8px;">  
+                        <div class="post-action ${hasLiked ? 'liked' : ''}" onclick="window.toggleLike('${p.id}')">
+                            <i class="${hasLiked ? 'fas' : 'far'} fa-heart"></i> <span>${totalLikes > 0 ? totalLikes : 'Like'}</span>
+                        </div>  
+                        <div class="post-action ${hasSaved ? 'saved' : ''}" onclick="window.toggleSave('${p.id}')">
+                            <i class="${hasSaved ? 'fas' : 'far'} fa-bookmark"></i> <span>${hasSaved ? 'Saved' : 'Save'}</span>
+                        </div>  
+                    </div>  
+                </div>
+            `;
+        }).join('');
+    }
+
+    window.toggleLike = async function(postId) {
+        if(!currentUser) {
+            showToast("Login to like posts", "warning");
+            setTimeout(() => window.location.href = 'login.html', 1000);
+            return;
+        }
+        const post = allCommunityPosts.find(p => p.id === postId);
+        if(post && post.likes && post.likes[currentUser.uid]) {
+            await remove(ref(db, `community/${postId}/likes/${currentUser.uid}`));
+        } else {
+            await set(ref(db, `community/${postId}/likes/${currentUser.uid}`), true);
+        }
+    };
+
+    window.toggleSave = async function(postId) {
+        if(!currentUser) {
+            showToast("Login to save posts", "warning");
+            setTimeout(() => window.location.href = 'login.html', 1000);
+            return;
+        }
+        if(userSavedPosts[postId]) {
+            await remove(ref(db, `users/${currentUser.uid}/saved/${postId}`));
+        } else {
+            await set(ref(db, `users/${currentUser.uid}/saved/${postId}`), true);
+        }
+    };
+
+    const textarea = document.getElementById('cp-text');
+    textarea.addEventListener('input', () => {
+        const words = textarea.value.trim().split(/\s+/).filter(Boolean);
+        const hint = document.getElementById('word-count-hint');
+        if(words.length > 300) {
+            textarea.value = words.slice(0, 300).join(" ");
+            hint.innerText = "300 / 300 words (Limit reached)";
+            hint.style.color = "var(--danger)";
+        } else {
+            hint.innerText = `${words.length} / 300 words`;
+            hint.style.color = "var(--text-muted)";
+        }
+    });
+
+    document.getElementById('btn-open-post-modal').addEventListener('click', () => {
+        if(!currentUser) {
+            showToast("Please login to post", "warning");
+            setTimeout(() => window.location.href = 'login.html', 1000);
+            return;
+        }
+        openModal('modal-add-post');
+    });
+
+    document.getElementById('btn-submit-post').addEventListener('click', async () => {
+        const text = textarea.value.trim();
+        if(!text) { showToast("Please write something", "warning"); return; }
+
+        showLoader();
+        try {
+            const imgUrl = await uploadToImgBB('cp-image');
+            const fakeLikes = parseInt(document.getElementById('cp-fakelikes')?.value) || 0;
+
+            await set(push(ref(db, 'community')), {
+                uid: currentUser.uid,
+                authorName: currentUser.displayName || currentUser.email.split('@')[0],
+                text: text,
+                imageUrl: imgUrl || null,
+                timestamp: Date.now(),
+                fakeLikes: fakeLikes
+            });
+
+            showToast("Posted successfully!", "success");
+            closeTopModal();
+            textarea.value = '';
+            document.getElementById('cp-image').value = '';
+        } catch(e) { showToast("Error posting", "error"); }
+        hideLoader();
+    });
+
+    window.addEventListener('scroll', () => {
+        if(window.innerHeight + window.scrollY >= document.body.offsetHeight - 80) {
+            if(visibleLimit < allCommunityPosts.length) {
+                visibleLimit += 5;
+                renderFeed();
+            }
+        }
+    });
+</script>
+</body>
+</html>
