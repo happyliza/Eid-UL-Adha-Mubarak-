@@ -10,11 +10,10 @@
 </head>
 <body>
 
-<div id="global-loader"><div class="spinner"></div><div style="margin-top:10px;font-weight:500;">Loading...</div></div>  
 <div id="toast-container"></div>  
 
 <div id="app-container">  
-    <!-- نیویگیشن بار -->
+    <!-- باٹم اور سائیڈ نیویگیشن بار -->
     <nav id="bottom-nav">  
         <a class="nav-item active" href="index.html"><i class="fas fa-home"></i>Home</a>  
         <a class="nav-item" href="explore.html"><i class="fas fa-compass"></i>Explore</a>  
@@ -60,7 +59,7 @@
                 <div id="home-live-classes" style="margin-bottom:24px; display:flex; flex-direction:column; gap:12px;"></div>  
             </div>  
 
-            <!-- فیچرڈ کورسز -->
+            <!-- فیچرڈ کورسز گرڈ -->
             <div id="home-courses-wrapper">  
                 <h3 style="margin-bottom: 12px; font-size: 16px;">Featured Courses</h3>  
                 <div id="home-featured-courses" class="grid-cards"></div>  
@@ -69,58 +68,23 @@
     </div>  
 </div>  
 
-<!-- چیک آؤٹ موڈل -->
-<div id="modal-checkout" class="modal-overlay">  
-    <div class="modal-content">  
-        <div class="modal-header">  
-            <h3>Enroll / Checkout</h3>  
-            <button class="close-modal" onclick="closeTopModal()">&times;</button>  
-        </div>  
-        <div class="modal-body">  
-            <div id="checkout-item-info" style="margin-bottom:16px; padding:12px; background:var(--bg-color); border-radius:8px;"></div>  
-            <div id="checkout-payment-section">  
-                <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Payment Instructions:</p>  
-                <div id="checkout-account-details" style="background:#FFFBEB; border:1px solid #FDE68A; padding:12px; border-radius:8px; margin-bottom:16px; font-size:13px; line-height: 1.5;"></div>  
-                <div class="input-group">
-                    <label>Payment Method Used</label>
-                    <select id="checkout-method">
-                        <option value="easypaisa">EasyPaisa</option>
-                        <option value="jazzcash">JazzCash</option>
-                        <option value="bank">Bank Transfer</option>
-                    </select>
-                </div>  
-                <div class="input-group">
-                    <label>Transaction ID (TID) / Reference No.</label>
-                    <input type="text" id="checkout-tid" required placeholder="e.g. 1234567890">
-                </div>  
-                <div class="input-group">
-                    <label>Payment Screenshot</label>
-                    <input type="file" id="checkout-screenshot" accept="image/*" required>
-                </div>  
-            </div>  
-            <button class="btn btn-primary" id="btn-submit-payment" style="width:100%; padding:14px;">Submit Payment Details</button>  
-        </div>  
-    </div>  
-</div>  
-
-                                
-            <script type="module">
-    import { auth, db, ref, onValue, get, set, push, onAuthStateChanged } from "./js/firebase-config.js";
-    import { showToast, openModal, closeTopModal } from "./js/common.js";
-    import { resolveImageUrl, setImgBbKey, uploadToImgBB } from "./js/img-uploader.js";
+<script type="module">
+    import { auth, db, ref, onValue, get, onAuthStateChanged } from "./js/firebase-config.js";
+    import { showToast } from "./js/common.js";
+    import { resolveImageUrl, setImgBbKey } from "./js/img-uploader.js";
 
     let currentUser = null;
+    
+    // فوری لوکل کیشے ڈیٹا (تاکہ پیج بغیر انتظار کے فوراً سامنے آئے)
     let allCourses = JSON.parse(localStorage.getItem('mda_cache_courses') || '[]');
     let allLiveClasses = JSON.parse(localStorage.getItem('mda_cache_live') || '[]');
     let allBanners = JSON.parse(localStorage.getItem('mda_cache_banners') || '[]');
     let allCoursesPackagePrice = localStorage.getItem('mda_cache_vip_price') || 0;
-    let adminBankDetails = JSON.parse(localStorage.getItem('mda_cache_bank') || '{"bankName":"EasyPaisa / JazzCash / Bank","holderName":"Nazim Mustafa","accountNumber":"03105784772"}');
     
     let sliderInterval = null;
     let currentSlideIndex = 0;
-    let activeItemContext = null;
 
-    // کیشے سے فوری ڈسپلے (Zero Delay Rendering)
+    // کیشے رینڈرنگ
     if(allCoursesPackagePrice) document.getElementById('home-all-courses-price').innerText = `Rs ${allCoursesPackagePrice}`;
     if(allBanners.length > 0) renderHomeSlider();
     if(allLiveClasses.length > 0) renderLiveClasses();
@@ -130,17 +94,13 @@
         currentUser = user;
     });
 
-    // بیک گراؤنڈ میں ریئل ٹائم اپڈیٹ اور کیشے سیو
+    // بیک گراؤنڈ میں فائر بیس ریئل ٹائم اپڈیٹس
     onValue(ref(db, 'settings'), (snap) => {
         if(snap.exists()) {
             const data = snap.val();
             setImgBbKey(data.imgbb_api_key || "");
             allCoursesPackagePrice = data.all_courses_package_price || 0;
             localStorage.setItem('mda_cache_vip_price', allCoursesPackagePrice);
-            if(data.admin_bank) {
-                adminBankDetails = data.admin_bank;
-                localStorage.setItem('mda_cache_bank', JSON.stringify(adminBankDetails));
-            }
             document.getElementById('home-all-courses-price').innerText = `Rs ${allCoursesPackagePrice}`;
         }
     });
@@ -285,6 +245,7 @@
 
     document.getElementById('home-search-input').addEventListener('keyup', renderCourses);
 
+    // نئے الگ چیک آؤٹ پیج پر سیدھا ری ڈائریکٹ (کوئی پاپ اپ نہیں کھلے گا)
     document.getElementById('btn-buy-vip').addEventListener('click', async () => {
         if(!currentUser) {
             showToast("Please login first", "warning");
@@ -298,56 +259,17 @@
             return;
         }
 
-        activeItemContext = {
+        const itemContext = {
             id: 'LIFETIME_ALL_COURSES',
             title: 'Lifetime All Courses VIP Package',
-            price: allCoursesPackagePrice,
+            price: Number(allCoursesPackagePrice),
             type: 'all_courses_package',
-            instructorId: 'admin'
+            instructorId: 'admin',
+            instructorName: 'Mustafa Digital Academy'
         };
 
-        document.getElementById('checkout-item-info').innerHTML = `<strong>Purchasing:</strong> ${activeItemContext.title}<br><strong>Amount to Pay:</strong> Rs ${activeItemContext.price}`;
-        const accBox = document.getElementById('checkout-account-details');
-        accBox.innerHTML = `
-            <strong>${adminBankDetails.bankName}</strong><br>
-            Account Holder: <strong>${adminBankDetails.holderName}</strong><br>
-            Account Number: <strong>${adminBankDetails.accountNumber}</strong>
-            <button class="copy-btn" onclick="window.copyToClipboard('${adminBankDetails.accountNumber}')"><i class="fas fa-copy"></i> Copy</button><br><br>
-            Please transfer the exact amount and upload transaction screenshot.
-        `;
-        openModal('modal-checkout');
-    });
-
-    document.getElementById('btn-submit-payment').addEventListener('click', async () => {
-        const tid = document.getElementById('checkout-tid').value.trim();
-        if(!tid) { showToast("Please enter Transaction ID", "warning"); return; }
-
-        try {
-            const imgUrl = await uploadToImgBB('checkout-screenshot');
-            if(!imgUrl) return;
-
-            await set(push(ref(db, 'payment_requests')), {
-                uid: currentUser.uid,
-                email: currentUser.email,
-                itemId: activeItemContext.id,
-                itemName: activeItemContext.title,
-                itemType: activeItemContext.type,
-                instructorId: 'admin',
-                method: document.getElementById('checkout-method').value,
-                transactionId: tid,
-                screenshotUrl: imgUrl,
-                status: 'pending',
-                amount: activeItemContext.price,
-                timestamp: Date.now()
-            });
-
-            showToast("Payment submitted! Waiting for Admin approval.", "success");
-            closeTopModal();
-            document.getElementById('checkout-tid').value = '';
-            document.getElementById('checkout-screenshot').value = '';
-        } catch(e) {
-            showToast("Payment submission failed", "error");
-        }
+        sessionStorage.setItem('mda_checkout_item', JSON.stringify(itemContext));
+        window.location.href = 'checkout.html';
     });
 </script>
 </body>
