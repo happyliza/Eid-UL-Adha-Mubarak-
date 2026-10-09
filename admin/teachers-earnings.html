@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teachers Earnings & Wallets</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<header>  
+    <span class="header-brand">Teachers Earnings</span>  
+    <a href="../admin-panel.html" class="btn btn-outline btn-sm"><i class="fas fa-arrow-left"></i> Back to Admin</a>  
+</header>
+<main id="main-content" style="max-width:850px; margin-top:20px;">
+    <div id="teachers-earnings-list"></div>
+</main>
+<script type="module">
+    import { auth, db, ref, get, onAuthStateChanged, ADMIN_EMAIL } from "../js/firebase-config.js";
+
+    onAuthStateChanged(auth, user => {
+        if(!user || user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) window.location.href = '../index.html';
+    });
+
+    async function loadEarnings() {
+        const usersSnap = await get(ref(db, 'users'));
+        const walletsSnap = await get(ref(db, 'teacher_wallets'));
+        const coursesSnap = await get(ref(db, 'courses'));
+        const liveSnap = await get(ref(db, 'live_classes'));
+
+        const users = usersSnap.exists() ? usersSnap.val() : {};
+        const wallets = walletsSnap.exists() ? walletsSnap.val() : {};
+
+        let coursesList = [];
+        if(coursesSnap.exists()) coursesSnap.forEach(c => coursesList.push(c.val()));
+
+        let liveList = [];
+        if(liveSnap.exists()) liveSnap.forEach(c => liveList.push(c.val()));
+
+        const list = document.getElementById('teachers-earnings-list');
+        let html = "";
+
+        for(let uid in users) {
+            const u = users[uid];
+            if(u.isTeacher) {
+                const bal = wallets[uid]?.balance || 0;
+                const cCount = coursesList.filter(c => c.instructorId === uid).length;
+                const lCount = liveList.filter(c => c.instructorId === uid).length;
+                html += `
+                    <div class="card card-body" style="margin-bottom:12px;">  
+                        <h3 style="color:var(--primary);">${u.name} <i class="fas fa-check-circle" style="color:var(--blue-tick);"></i></h3>  
+                        <p style="color:var(--text-muted); font-size:13px; margin:4px 0 10px 0;">${u.email}</p>  
+                        <div style="display:flex; gap:16px; margin-bottom:10px; font-size:14px;">  
+                            <div><strong>Courses:</strong> ${cCount}</div>  
+                            <div><strong>Live Classes:</strong> ${lCount}</div>  
+                        </div>  
+                        <div style="font-weight:700; color:var(--secondary); font-size:16px;">Current Wallet Balance: Rs ${bal}</div>  
+                    </div>  
+                `;
+            }
+        }
+        list.innerHTML = html || '<p style="text-align:center; padding:20px;">No teachers found.</p>';
+    }
+    loadEarnings();
+</script>
+</body>
+</html>
