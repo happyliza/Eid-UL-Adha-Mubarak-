@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students Activity Tracking</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<header>  
+    <span class="header-brand">Students Activity</span>  
+    <a href="../admin-panel.html" class="btn btn-outline btn-sm"><i class="fas fa-arrow-left"></i> Back to Admin</a>  
+</header>
+<main id="main-content" style="max-width:850px; margin-top:20px;">
+    <div class="card card-body" style="padding:0;">
+        <div id="students-activity-list"></div>
+    </div>
+</main>
+<script type="module">
+    import { auth, db, ref, get, onAuthStateChanged, ADMIN_EMAIL } from "../js/firebase-config.js";
+
+    onAuthStateChanged(auth, user => {
+        if(!user || user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) window.location.href = '../index.html';
+    });
+
+    async function loadActivity() {
+        const usersSnap = await get(ref(db, 'users'));
+        const users = usersSnap.exists() ? usersSnap.val() : {};
+        const list = document.getElementById('students-activity-list');
+        let html = "";
+
+        for(let uid in users) {
+            const u = users[uid];
+            if(!u.isTeacher && u.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+                const cAccess = await get(ref(db, `course_access/${uid}`));
+                const count = cAccess.exists() ? Object.keys(cAccess.val()).length : 0;
+                html += `
+                    <div class="list-row" style="flex-direction:column; align-items:flex-start; gap:4px; padding:12px; border-bottom:1px solid var(--border-color);">  
+                        <div><strong>Student Name:</strong> ${u.name || 'Student'} (${u.email})</div>  
+                        <div><strong>Enrolled Courses:</strong> ${count} ${u.lifetimeAllCoursesAccess ? '<span class="badge">VIP PASS</span>' : ''}</div>  
+                        <div><small style="color:var(--text-muted);">Joined: ${new Date(u.createdAt || Date.now()).toLocaleDateString()}</small></div>  
+                    </div>  
+                `;
+            }
+        }
+        list.innerHTML = html || '<p style="padding:20px; text-align:center;">No students found.</p>';
+    }
+    loadActivity();
+</script>
+</body>
+</html>
