@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Teacher Requests</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="toast-container"></div>
+<header>  
+    <span class="header-brand">Verify Teacher Requests</span>  
+    <a href="../admin-panel.html" class="btn btn-outline btn-sm"><i class="fas fa-arrow-left"></i> Back to Admin</a>  
+</header>
+<main id="main-content" style="max-width:700px; margin-top:20px;">
+    <div id="teacher-requests-list"></div>
+</main>
+<script type="module">
+    import { auth, db, ref, onValue, update, onAuthStateChanged, ADMIN_EMAIL } from "../js/firebase-config.js";
+    import { showToast } from "../js/common.js";
+
+    onAuthStateChanged(auth, user => {
+        if(!user || user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) window.location.href = '../index.html';
+    });
+
+    onValue(ref(db, 'teacher_requests'), snap => {
+        const list = document.getElementById('teacher-requests-list');
+        let html = "";
+        if(snap.exists()) {
+            snap.forEach(c => {
+                const req = { id: c.key, ...c.val() };
+                if(req.status === 'pending') {
+                    html += `
+                        <div class="card card-body" style="margin-bottom:12px;">  
+                            <p><strong>Name:</strong> ${req.name} (S/O ${req.fname})</p>  
+                            <p><strong>Email:</strong> ${req.email}</p>  
+                            <p><strong>WhatsApp:</strong> ${req.whatsapp}</p>  
+                            <div style="display:flex; gap:8px; margin-top:10px;">  
+                                <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="window.approveTeacher('${req.id}')">Approve Teacher</button>  
+                                <button class="btn btn-danger btn-sm" style="flex:1;" onclick="window.rejectTeacher('${req.id}')">Reject</button>  
+                            </div>  
+                        </div>  
+                    `;
+                }
+            });
+        }
+        list.innerHTML = html || '<p style="text-align:center; padding:20px;">No pending teacher requests.</p>';
+    });
+
+    window.approveTeacher = async function(uid) {
+        await update(ref(db, `users/${uid}`), { isTeacher: true, verificationStatus: 'approved' });
+        await update(ref(db, `teacher_requests/${uid}`), { status: 'approved' });
+        showToast("Teacher Approved!", "success");
+    };
+
+    window.rejectTeacher = async function(uid) {
+        await update(ref(db, `users/${uid}`), { verificationStatus: 'rejected' });
+        await update(ref(db, `teacher_requests/${uid}`), { status: 'rejected' });
+        showToast("Teacher Rejected", "info");
+    };
+</script>
+</body>
+</html>
