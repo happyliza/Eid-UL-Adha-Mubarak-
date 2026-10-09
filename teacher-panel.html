@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MDA - Teacher Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="global-loader"><div class="spinner"></div><div style="margin-top:10px;font-weight:500;">Loading...</div></div>  
+<div id="toast-container"></div>  
+
+<div id="app-container">  
+    <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">  
+        <header>  
+            <a href="index.html" class="header-brand">MDA Mustafa Digital Academy</a>  
+            <a href="profile.html" style="color:var(--text-muted); font-size:14px; text-decoration:none;"><i class="fas fa-arrow-left"></i> Profile</a>  
+        </header>  
+
+        <main id="main-content" style="max-width:800px;">  
+            <h2 style="margin-bottom: 16px;">Teacher Panel</h2>  
+            
+            <!-- والٹ بیلنس کارڈ -->
+            <div class="wallet-card">  
+                <h3>My Wallet Balance (Earnings)</h3>  
+                <h1 id="teacher-wallet-balance">Rs 0</h1>  
+                <button class="btn btn-warning" id="btn-request-withdrawal" style="color:#000; font-weight:bold; width:100%;">
+                    <i class="fas fa-money-bill-wave"></i> Request Monthly Withdrawal (1st Date)
+                </button>  
+            </div>  
+
+            <div class="grid-cards" style="margin-bottom:20px;">  
+                <div class="card card-body">
+                    <h3 id="teacher-stat-courses">0</h3>
+                    <p style="font-size:12px;color:var(--text-muted)">My Courses</p>
+                </div>  
+                <div class="card card-body">
+                    <h3 id="teacher-stat-live">0</h3>
+                    <p style="font-size:12px;color:var(--text-muted)">My Live Classes</p>
+                </div>  
+            </div>  
+
+            <div style="display:flex; flex-direction:column; gap:10px;">  
+                <button class="btn btn-primary" id="btn-open-add-course"><i class="fas fa-book"></i> Add New Course</button>  
+                <button class="btn btn-outline" id="btn-open-manage-courses"><i class="fas fa-edit"></i> Manage My Courses & Lessons</button>  
+                <button class="btn btn-secondary" id="btn-open-add-live"><i class="fas fa-video"></i> Schedule Live Class</button>  
+                <button class="btn btn-outline" id="btn-open-manage-live"><i class="fas fa-list"></i> Manage My Live Classes</button>  
+            </div>  
+        </main>  
+    </div>  
+</div>  
+
+<!-- کورس تخلیق و تدوین موڈل -->
+<div id="modal-admin-course" class="modal-overlay">  
+    <div class="modal-content">  
+        <div class="modal-header">  
+            <h3 id="course-modal-title">Add New Course</h3>  
+            <button class="close-modal" onclick="closeTopModal()">&times;</button>  
+        </div>  
+        <div class="modal-body">  
+            <form id="form-teacher-course">  
+                <div class="input-group"><label>Course Title</label><input type="text" id="ac-title" required></div>  
+                <div class="input-group"><label>Description</label><textarea id="ac-desc" rows="3" required></textarea></div>  
+                <div class="input-group">  
+                    <label>Course Type</label>  
+                    <select id="ac-type" required>  
+                        <option value="free">Free</option>  
+                        <option value="paid">Paid</option>  
+                        <option value="video">Video Course (Paid)</option>  
+                    </select>  
+                </div>  
+                <div class="input-group"><label>Original Price (Rs)</label><input type="number" id="ac-original-price" value="0"></div>  
+                <div class="input-group"><label>Discount / Sale Price (Rs)</label><input type="number" id="ac-price" value="0"></div>  
+                <div class="input-group">  
+                    <label>Display Size (Mobile)</label>  
+                    <select id="ac-layout" required>  
+                        <option value="half">Half Width (2 courses per line)</option>  
+                        <option value="full">Full Width (1 big course per line)</option>  
+                    </select>  
+                </div>  
+                <div class="input-group"><label>Thumbnail Image</label><input type="file" id="ac-thumb" accept="image/*"></div>  
+                <button type="submit" class="btn btn-primary" style="width:100%;">Save Course</button>  
+            </form>  
+        </div>  
+    </div>  
+</div>  
+
+<!-- کورسز مینیج موڈل -->
+<div id="modal-admin-manage-courses" class="modal-overlay">  
+    <div class="modal-content">  
+        <div class="modal-header">  
+            <h3>Manage My Courses</h3>  
+            <button class="close-modal" onclick="closeTopModal()">&times;</button>  
+        </div>  
+        <div class="modal-body" style="padding:0;">  
+            <div id="admin-manage-courses-list"></div>  
+        </div>  
+    </div>  
+</div>  
+
+<!-- اسباق (Lessons) مینیج موڈل -->
+<div id="modal-admin-manage-lessons" class="modal-overlay">  
+    <div class="modal-content">  
+        <div class="modal-header">  
+            <h3>Manage Course Lessons</h3>  
+            <button class="close-modal" onclick="closeTopModal()">&times;</button>  
+        </div>  
+        <div class="modal-body">  
+            <form id="form-admin-add-lesson" style="margin-bottom: 20px; border-bottom:1px solid var(--border-color); padding-bottom:16px;">  
+                <p style="font-weight:600; margin-bottom:10px;">Add New Lesson</p>  
+                <div class="input-group"><label>Lecture Title</label><input type="text" id="al-title" required></div>  
+                <div class="input-group"><label>Video URL (Google Drive, MP4, or YouTube)</label><input type="url" id="al-url" required placeholder="https://youtu.be/... or Drive preview"></div>  
+                <button type="submit" class="btn btn-secondary" style="width:100%;"><i class="fas fa-plus"></i> Add Lesson</button>  
+            </form>  
+            <div id="admin-manage-lessons-list"></div>  
+        </div>  
+    </div>  
+</div>  
+
+<!-- لائیو کلاس شیڈول موڈل -->
+<div id="modal-admin-live" class="modal-overlay">  
+    <div class="modal-content">  
+        <div class="modal-header">  
+            <h3 id="live-modal-title">Schedule Live Class</h3>  
+            <button class="close-modal" onclick="closeTopModal()">&times;</button>  
+        </div>  
+        <div class="modal-body">  
+            <form id="form-teacher-live">  
+                <div class="input-group"><label>Class Title</label><input type="text" id="alc-title" required></div>  
+                <div class="input-group">
+                    <label>Class Days (Weekly)</label>
+                    <div class="days-checkboxes">
+                        <label><input type="checkbox" name="alc-day" value="Mon"> <span>Mon</span></label>
+                        <label><input type="checkbox" name="alc-day" value="Tue"> <span>Tue</span></label>
+                        <label><input type="checkbox" name="alc-day" value="Wed"> <span>Wed</span></label>
+                        <label><input type="checkbox" name="alc-day" value="Thu"> <span>Thu</span></label>
+                        <label><input type="checkbox" name="alc-day" value="Fri"> <span>Fri</span></label>
+                        <label><input type="checkbox" name="alc-day" value="Sat"> <span>Sat</span></label>
+                        <label><input type="checkbox" name="alc-day" value="Sun"> <span>Sun</span></label>
+                    </div>
+                </div>
+                <div class="input-group"><label>Class Thumbnail</label><input type="file" id="alc-thumb" accept="image/*"></div>  
+                <div class="input-group"><label>Google Meet / Zoom Link</label><input type="url" id="alc-link" required></div>  
+                <div class="input-group">  
+                    <label>Access Type</label>  
+                    <select id="alc-type" required>  
+                        <option value="free">Free for all</option>  
+                        <option value="paid">Paid Access</option>  
+                    </select>  
+                </div>  
+                <div class="input-group" id="alc-price-group" style="display:none;"><label>Price (Rs)</label><input type="number" id="alc-price" value="0"></div>  
+                <div class="input-group"><label>Scheduled Date</label><input type="date" id="alc-date" required></div>  
+                <div class="input-group"><label>Start Time</label><input type="time" id="alc-time" required></div>  
+                <div class="input-group"><label>End Time</label><input type="time" id="alc-endtime" required></div>  
+                <button type="submit" class="btn btn-secondary" style="width:100%;">Save Live Session</button>  
+            </form>  
+        </div>  
+    </div>  
+</div>  
+
+<!-- لائیو کلاسز مینج لسٹ موڈل -->
+<div id="modal-manage-live" class="modal-overlay">  
+    <div class="modal-content">  
+        <div class="modal-header">  
+            <h3>Manage My Live Classes</h3>  
+            <button class="close-modal" onclick="closeTopModal()">&times;</button>  
+        </div>  
+        <div class="modal-body" style="padding:0;">  
+            <div id="admin-manage-live-list"></div>  
+        </div>  
+    </div>  
+</div>  
+
+<script type="module">
+    import { auth, db, ref, onValue, get, set, update, remove, push, onAuthStateChanged } from "./js/firebase-config.js";
+    import { showToast, showLoader, hideLoader, openModal, closeTopModal } from "./js/common.js";
+    import { uploadToImgBB, setImgBbKey } from "./js/img-uploader.js";
+
+    let currentUser = null;
+    let myCourses = [];
+    let myLiveClasses = [];
+    let editCourseId = null;
+    let oldCourseThumb = "";
+    let editLiveClassId = null;
+    let oldLiveThumb = "";
+    let manageLessonsCourseId = null;
+
+    showLoader();
+
+    onAuthStateChanged(auth, async (user) => {
+        if(!user) {
+            window.location.href = 'login.html';
+            return;
+        }
+        currentUser = user;
+
+        const uSnap = await get(ref(db, `users/${user.uid}`));
+        if(!uSnap.exists() || !uSnap.val().isTeacher) {
+            showToast("Access denied. Only verified instructors allowed.", "error");
+            window.location.href = 'profile.html';
+            return;
+        }
+
+        // والٹ بیلنس لسنر
+        onValue(ref(db, `teacher_wallets/${user.uid}`), (snap) => {
+            const wallet = snap.exists() ? snap.val() : { balance: 0 };
+            document.getElementById('teacher-wallet-balance').innerText = `Rs ${wallet.balance || 0}`;
+        });
+
+        // کورسز لسنر
+        onValue(ref(db, 'courses'), (snap) => {
+            myCourses = [];
+            if(snap.exists()) {
+                snap.forEach(c => {
+                    const data = { id: c.key, ...c.val() };
+                    if(data.instructorId === user.uid) myCourses.push(data);
+                });
+            }
+            document.getElementById('teacher-stat-courses').innerText = myCourses.length;
+            renderTeacherCourses();
+        });
+
+        // لائیو کلاسز لسنر
+        onValue(ref(db, 'live_classes'), (snap) => {
+            myLiveClasses = [];
+            if(snap.exists()) {
+                snap.forEach(c => {
+                    const data = { id: c.key, ...c.val() };
+                    if(data.instructorId === user.uid) myLiveClasses.push(data);
+                });
+            }
+            document.getElementById('teacher-stat-live').innerText = myLiveClasses.length;
+            renderTeacherLive();
+            hideLoader();
+        });
+    });
+
+    onValue(ref(db, 'settings'), (snap) => {
+        if(snap.exists()) setImgBbKey(snap.val().imgbb_api_key || "");
+    });
+
+    document.getElementById('btn-request-withdrawal').addEventListener('click', async () => {
+        showLoader();
+        try {
+            const wSnap = await get(ref(db, `teacher_wallets/${currentUser.uid}`));
+            const balance = wSnap.exists() ? (wSnap.val().balance || 0) : 0;
+            if(balance <= 0) {
+                showToast("Your wallet balance is Rs 0", "warning");
+                hideLoader();
+                return;
+            }
+
+            const bSnap = await get(ref(db, `teacher_bank_accounts/${currentUser.uid}`));
+            if(!bSnap.exists()) {
+                showToast("Admin has not added your bank account yet. Please contact Admin.", "error");
+                hideLoader();
+                return;
+            }
+            const bankInfo = bSnap.val();
+
+            await set(push(ref(db, 'withdrawal_requests')), {
+                teacherUid: currentUser.uid,
+                teacherName: currentUser.displayName || "Teacher",
+                amount: balance,
+                bankName: bankInfo.bankName,
+                holderName: bankInfo.holderName,
+                accountNumber: bankInfo.accountNumber,
+                status: 'pending',
+                timestamp: Date.now()
+            });
+
+            showToast("Withdrawal request submitted to Admin successfully!", "success");
+        } catch(e) {
+            showToast("Error requesting withdrawal", "error");
+        }
+        hideLoader();
+    });
+
+    // کورس ہینڈلنگ
+    document.getElementById('btn-open-add-course').addEventListener('click', () => {
+        editCourseId = null;
+        oldCourseThumb = "";
+        document.getElementById('course-modal-title').innerText = "Add New Course";
+        document.getElementById('form-teacher-course').reset();
+        openModal('modal-admin-course');
+    });
+
+    document.getElementById('btn-open-manage-courses').addEventListener('click', () => {
+        renderTeacherCourses();
+        openModal('modal-admin-manage-courses');
+    });
+
+    function renderTeacherCourses() {
+        const list = document.getElementById('admin-manage-courses-list');
+        if(!list) return;
+        if(myCourses.length === 0) {
+            list.innerHTML = '<p style="padding:16px; text-align:center;">No courses created yet.</p>';
+            return;
+        }
+
+        list.innerHTML = myCourses.map(c => `
+            <div class="list-row">
+                <div style="font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:10px;">${c.title}</div>
+                <div style="display:flex; gap:6px;">
+                    <button class="btn btn-secondary btn-sm" onclick="window.openLessonsModal('${c.id}')"><i class="fas fa-list"></i></button>
+                    <button class="btn btn-primary btn-sm" onclick="window.editTeacherCourse('${c.id}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-danger btn-sm" onclick="window.deleteTeacherCourse('${c.id}')"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    window.editTeacherCourse = function(courseId) {
+        const c = myCourses.find(item => item.id === courseId);
+        if(!c) return;
+        editCourseId = courseId;
+        oldCourseThumb = c.thumbnail || "";
+        document.getElementById('course-modal-title').innerText = "Edit Course";
+        document.getElementById('ac-title').value = c.title || "";
+        document.getElementById('ac-desc').value = c.description || "";
+        document.getElementById('ac-type').value = c.type || "paid";
+        document.getElementById('ac-original-price').value = c.originalPrice || 0;
+        document.getElementById('ac-price').value = c.price || 0;
+        document.getElementById('ac-layout').value = c.layout || "half";
+        closeTopModal();
+        openModal('modal-admin-course');
+    };
+
+    window.deleteTeacherCourse = async function(courseId) {
+        if(!confirm("Are you sure you want to delete this course and all its lessons?")) return;
+        showLoader();
+        try {
+            await remove(ref(db, `courses/${courseId}`));
+            await remove(ref(db, `lessons/${courseId}`));
+            showToast("Course deleted successfully", "success");
+        } catch(e) { showToast("Error deleting course", "error"); }
+        hideLoader();
+    };
+
+    document.getElementById('form-teacher-course').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        showLoader();
+        try {
+            let thumbUrl = await uploadToImgBB('ac-thumb');
+            if(!thumbUrl) thumbUrl = oldCourseThumb;
+
+            const courseData = {
+                title: document.getElementById('ac-title').value.trim(),
+                description: document.getElementById('ac-desc').value.trim(),
+                type: document.getElementById('ac-type').value,
+                originalPrice: Number(document.getElementById('ac-original-price').value) || 0,
+                price: Number(document.getElementById('ac-price').value) || 0,
+                layout: document.getElementById('ac-layout').value,
+                thumbnail: thumbUrl || "",
+                instructorId: currentUser.uid,
+                instructorName: currentUser.displayName || 'Instructor',
+                status: 'published',
+                updatedAt: Date.now()
+            };
+
+            if(editCourseId) {
+                await update(ref(db, `courses/${editCourseId}`), courseData);
+                showToast("Course updated!", "success");
+            } else {
+                courseData.createdAt = Date.now();
+                await set(push(ref(db, 'courses')), courseData);
+                showToast("Course created successfully!", "success");
+            }
+
+            closeTopModal();
+            document.getElementById('form-teacher-course').reset();
+        } catch(e) { showToast("Error saving course", "error"); }
+        hideLoader();
+    });
+
+    // اسباق (Lessons)
+    window.openLessonsModal = function(courseId) {
+        manageLessonsCourseId = courseId;
+        renderLessonsList();
+        closeTopModal();
+        openModal('modal-admin-manage-lessons');
+    };
+
+    async function renderLessonsList() {
+        const list = document.getElementById('admin-manage-lessons-list');
+        list.innerHTML = '<div class="spinner" style="margin:10px auto;"></div>';
+        try {
+            const snap = await get(ref(db, `lessons/${manageLessonsCourseId}`));
+            if(!snap.exists()) {
+                list.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">No lessons added yet.</p>';
+                return;
+            }
+            let html = "";
+            snap.forEach(child => {
+                html += `
+                    <div class="list-row" style="padding:8px 0;">
+                        <div style="font-size:14px; flex:1;">${child.val().title}</div>
+                        <button class="btn btn-danger btn-sm" onclick="window.deleteLesson('${child.key}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+            });
+            list.innerHTML = html;
+        } catch(e) { list.innerHTML = '<p>Error loading lessons</p>'; }
+    }
+
+    document.getElementById('form-admin-add-lesson').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        showLoader();
+        try {
+            const title = document.getElementById('al-title').value.trim();
+            const url = document.getElementById('al-url').value.trim();
+            await set(push(ref(db, `lessons/${manageLessonsCourseId}`)), {
+                title, url, createdAt: Date.now()
+            });
+            showToast("Lesson added successfully!", "success");
+            document.getElementById('al-title').value = '';
+            document.getElementById('al-url').value = '';
+            renderLessonsList();
+        } catch(e) { showToast("Error adding lesson", "error"); }
+        hideLoader();
+    });
+
+    window.deleteLesson = async function(lessonId) {
+        if(!confirm("Delete this lesson?")) return;
+        showLoader();
+        try {
+            await remove(ref(db, `lessons/${manageLessonsCourseId}/${lessonId}`));
+            showToast("Lesson deleted", "success");
+            renderLessonsList();
+        } catch(e) {}
+        hideLoader();
+    };
+
+    // لائیو کلاسز ہینڈلنگ
+    document.getElementById('alc-type').addEventListener('change', (e) => {
+        document.getElementById('alc-price-group').style.display = e.target.value === 'paid' ? 'block' : 'none';
+    });
+
+    document.getElementById('btn-open-add-live').addEventListener('click', () => {
+        editLiveClassId = null;
+        oldLiveThumb = "";
+        document.getElementById('live-modal-title').innerText = "Schedule Live Class";
+        document.getElementById('form-teacher-live').reset();
+        document.getElementById('alc-price-group').style.display = 'none';
+        openModal('modal-admin-live');
+    });
+
+    document.getElementById('btn-open-manage-live').addEventListener('click', () => {
+        renderTeacherLive();
+        openModal('modal-manage-live');
+    });
+
+    function renderTeacherLive() {
+        const list = document.getElementById('admin-manage-live-list');
+        if(!list) return;
+        if(myLiveClasses.length === 0) {
+            list.innerHTML = '<p style="padding:16px; text-align:center;">No live classes scheduled.</p>';
+            return;
+        }
+        list.innerHTML = myLiveClasses.map(c => `
+            <div class="list-row">
+                <div style="font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:10px;">${c.title} (${c.date})</div>
+                <div style="display:flex; gap:6px;">
+                    <button class="btn btn-primary btn-sm" onclick="window.editTeacherLive('${c.id}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-danger btn-sm" onclick="window.deleteTeacherLive('${c.id}')"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    window.editTeacherLive = function(classId) {
+        const lc = myLiveClasses.find(c => c.id === classId);
+        if(!lc) return;
+        editLiveClassId = classId;
+        oldLiveThumb = lc.thumbnail || "";
+        document.getElementById('live-modal-title').innerText = "Edit Live Class";
+        document.getElementById('alc-title').value = lc.title || "";
+        document.getElementById('alc-link').value = lc.link || "";
+        document.getElementById('alc-type').value = lc.type || "free";
+        document.getElementById('alc-price').value = lc.price || 0;
+        document.getElementById('alc-date').value = lc.date || "";
+        document.getElementById('alc-time').value = lc.time || "";
+        document.getElementById('alc-endtime').value = lc.endtime || "";
+        document.getElementById('alc-price-group').style.display = lc.type === 'paid' ? 'block' : 'none';
+
+        document.querySelectorAll('input[name="alc-day"]').forEach(cb => {
+            cb.checked = lc.days && lc.days.includes(cb.value);
+        });
+
+        closeTopModal();
+        openModal('modal-admin-live');
+    };
+
+    window.deleteTeacherLive = async function(classId) {
+        if(!confirm("Delete this live class?")) return;
+        showLoader();
+        try {
+            await remove(ref(db, `live_classes/${classId}`));
+            showToast("Deleted", "success");
+            closeTopModal();
+        } catch(e) {}
+        hideLoader();
+    };
+
+    document.getElementById('form-teacher-live').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        showLoader();
+        try {
+            let thumbUrl = await uploadToImgBB('alc-thumb');
+            if(!thumbUrl) thumbUrl = oldLiveThumb;
+
+            let selectedDays = [];
+            document.querySelectorAll('input[name="alc-day"]:checked').forEach(cb => selectedDays.push(cb.value));
+
+            const liveData = {
+                title: document.getElementById('alc-title').value.trim(),
+                link: document.getElementById('alc-link').value.trim(),
+                date: document.getElementById('alc-date').value,
+                time: document.getElementById('alc-time').value,
+                endtime: document.getElementById('alc-endtime').value,
+                thumbnail: thumbUrl || "",
+                type: document.getElementById('alc-type').value,
+                price: Number(document.getElementById('alc-price').value) || 0,
+                days: selectedDays,
+                instructorId: currentUser.uid,
+                instructorName: currentUser.displayName || 'Instructor',
+                updatedAt: Date.now()
+            };
+
+            if(editLiveClassId) {
+                await update(ref(db, `live_classes/${editLiveClassId}`), liveData);
+                showToast("Live session updated!", "success");
+            } else {
+                liveData.createdAt = Date.now();
+                await set(push(ref(db, 'live_classes')), liveData);
+                showToast("Live session scheduled!", "success");
+            }
+
+            closeTopModal();
+            document.getElementById('form-teacher-live').reset();
+        } catch(e) { showToast("Error scheduling live class", "error"); }
+        hideLoader();
+    });
+</script>
+</body>
+</html>
