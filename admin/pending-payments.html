@@ -14,7 +14,7 @@
     <span class="header-brand">Pending Payments</span>  
     <a href="../admin-panel.html" class="btn btn-outline btn-sm"><i class="fas fa-arrow-left"></i> Back to Admin</a>  
 </header>
-<main id="main-content" style="max-width:750px; margin-top:20px;">
+<main id="main-content" style="max-width:850px; margin-top:20px;">
     <div id="payments-list"></div>
 </main>
 <script type="module">
@@ -39,16 +39,41 @@
             snap.forEach(c => {
                 const req = { id: c.key, ...c.val() };
                 if(req.status === 'pending') {
+                    const studentName = req.userName || 'Student';
+                    const authGrantedDesc = req.grantType || (req.itemType?.toUpperCase() + ' ACCESS');
+
                     html += `
-                        <div class="card card-body" style="margin-bottom:14px;">  
-                            <p><strong>Item:</strong> ${req.itemName} <span class="badge">${req.itemType?.toUpperCase()}</span></p>  
-                            <p><strong>User Email:</strong> ${req.email}</p>  
-                            <p><strong>Transaction ID (TID):</strong> ${req.transactionId}</p>  
-                            <p><strong>Amount:</strong> Rs ${req.amount}</p>  
-                            <a href="${req.screenshotUrl}" target="_blank" style="color:var(--primary); font-weight:600; margin:6px 0; display:inline-block;">View Payment Screenshot</a>  
-                            <div style="display:flex; gap:10px; margin-top:10px;">  
-                                <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="window.approvePay('${req.id}', '${req.uid}', '${req.itemId}', '${req.itemType || 'course'}', '${req.instructorId || 'admin'}', ${req.amount || 0})">Approve & Split</button>  
-                                <button class="btn btn-danger btn-sm" style="flex:1;" onclick="window.rejectPay('${req.id}')">Reject</button>  
+                        <div class="card card-body" style="margin-bottom:16px; border-left:4px solid var(--primary);">  
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <h3 style="font-size:16px;">${req.itemName}</h3>
+                                <span class="badge">${req.itemType?.toUpperCase()}</span>
+                            </div>
+
+                            <div style="background:#F3F4F6; padding:10px; border-radius:6px; margin-bottom:10px; font-size:13px; line-height:1.6;">
+                                <div><i class="fas fa-user"></i> <strong>Student:</strong> ${studentName} (${req.userEmail}) [UID: ${req.uid}]</div>
+                                <div><i class="fas fa-chalkboard-teacher"></i> <strong>Instructor:</strong> ${req.instructorName || 'Platform/Admin'}</div>
+                                <div style="color:var(--primary); font-weight:600;"><i class="fas fa-key"></i> <strong>Authorization to Grant:</strong> ${authGrantedDesc}</div>
+                            </div>
+
+                            <div style="display:flex; gap:16px; font-size:13px; margin-bottom:10px;">
+                                <div><strong>Amount Paid:</strong> Rs ${req.amount}</div>
+                                <div><strong>Method:</strong> ${req.method}</div>
+                                <div><strong>TID:</strong> ${req.transactionId}</div>
+                            </div>
+
+                            ${req.teacherShare ? `<div style="font-size:12px; color:var(--secondary); margin-bottom:10px;"><strong>Revenue Split:</strong> Teacher gets Rs ${req.teacherShare} | Platform gets Rs ${req.adminShare}</div>` : ''}
+
+                            <a href="${req.screenshotUrl}" target="_blank" class="btn btn-outline btn-sm" style="margin-bottom:12px; width:max-content;">
+                                <i class="fas fa-external-link-alt"></i> View Payment Screenshot
+                            </a>  
+
+                            <div style="display:flex; gap:10px;">  
+                                <button class="btn btn-secondary" style="flex:1;" onclick="window.approvePay('${req.id}', '${req.uid}', '${req.itemId}', '${req.itemType || 'course'}', '${req.instructorId || 'admin'}', ${req.amount || 0}, ${req.teacherShare || 0})">
+                                    <i class="fas fa-check"></i> Approve & Grant Access
+                                </button>  
+                                <button class="btn btn-danger" style="flex:1;" onclick="window.rejectPay('${req.id}')">
+                                    <i class="fas fa-times"></i> Reject
+                                </button>  
                             </div>  
                         </div>  
                     `;
@@ -58,7 +83,7 @@
         list.innerHTML = html || '<p style="padding:20px; text-align:center;">No pending payments right now.</p>';
     });
 
-    window.approvePay = async function(reqId, uid, itemId, itemType, instructorId, amount) {
+    window.approvePay = async function(reqId, uid, itemId, itemType, instructorId, amount, teacherShare) {
         await update(ref(db, `payment_requests/${reqId}`), { status: 'approved', resolvedAt: Date.now() });
 
         if(itemType === 'course') {
@@ -66,7 +91,6 @@
                 courseId: itemId, accessType: 'lifetime', status: 'active', grantedAt: Date.now(), paymentId: reqId
             });
             if(instructorId && instructorId !== 'admin') {
-                const teacherShare = Math.round(Number(amount) * 0.40);
                 const wRef = ref(db, `teacher_wallets/${instructorId}/balance`);
                 const snap = await get(wRef);
                 const bal = snap.exists() ? snap.val() : 0;
@@ -87,7 +111,6 @@
                 classId: itemId, status: 'active', grantedAt: Date.now(), expiresAt, paymentId: reqId
             });
             if(instructorId && instructorId !== 'admin') {
-                const teacherShare = Math.round(Number(amount) * 0.60);
                 const wRef = ref(db, `teacher_wallets/${instructorId}/balance`);
                 const snap = await get(wRef);
                 const bal = snap.exists() ? snap.val() : 0;
@@ -101,7 +124,7 @@
             await update(ref(db, `users/${uid}`), { lifetimeAllCoursesAccess: true });
         }
 
-        showToast("Payment Approved & Revenue Share Split!", "success");
+        showToast("Payment Approved & Authorization Granted Successfully!", "success");
     };
 
     window.rejectPay = async function(reqId) {
