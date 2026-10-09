@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MDA - My Profile</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="global-loader"><div class="spinner"></div><div style="margin-top:10px;font-weight:500;">Loading...</div></div>  
+<div id="toast-container"></div>  
+
+<div id="app-container">  
+    <nav id="bottom-nav">  
+        <a class="nav-item" href="index.html"><i class="fas fa-home"></i>Home</a>  
+        <a class="nav-item" href="explore.html"><i class="fas fa-compass"></i>Explore</a>  
+        <a class="nav-item" href="books.html"><i class="fas fa-book"></i>E-Books</a>  
+        <a class="nav-item" href="my-learning.html"><i class="fas fa-book-open"></i>My Learning</a>  
+        <a class="nav-item" href="community.html"><i class="fas fa-users"></i>Community</a>  
+        <a class="nav-item active" href="profile.html"><i class="fas fa-user"></i>Profile</a>  
+    </nav>  
+
+    <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">  
+        <header>  
+            <a href="index.html" class="header-brand">MDA Mustafa Digital Academy</a>  
+            <a href="index.html" style="color:var(--text-muted); font-size:14px; text-decoration:none;"><i class="fas fa-home"></i> Home</a>  
+        </header>  
+
+        <main id="main-content">  
+            <div id="profile-content"></div>  
+        </main>  
+    </div>  
+</div>  
+
+<!-- ایڈٹ پروفائل موڈل -->
+<div id="modal-edit-profile" class="modal-overlay">  
+    <div class="modal-content">  
+        <div class="modal-header">  
+            <h3>Edit Profile</h3>  
+            <button class="close-modal" onclick="closeTopModal()">&times;</button>  
+        </div>  
+        <div class="modal-body">  
+            <form id="form-edit-profile">  
+                <div class="input-group">  
+                    <label>Full Name</label>  
+                    <input type="text" id="ep-name" required>  
+                </div>  
+                <div class="input-group">  
+                    <label>Profile Picture (Can change once every 30 days)</label>  
+                    <input type="file" id="ep-avatar" accept="image/*">  
+                </div>  
+                <button type="submit" class="btn btn-primary" style="width:100%;">Save Changes</button>  
+            </form>  
+        </div>  
+    </div>  
+</div>  
+
+<!-- ٹیچر ویریفکیشن موڈل -->
+<div id="modal-teacher-verification" class="modal-overlay">  
+    <div class="modal-content">  
+        <div class="modal-header">  
+            <h3>Instructor Verification Form</h3>  
+            <button class="close-modal" onclick="closeTopModal()">&times;</button>  
+        </div>  
+        <div class="modal-body">  
+            <form id="form-teacher-verification">  
+                <div class="input-group"><label>Full Name</label><input type="text" id="tv-name" required></div>  
+                <div class="input-group"><label>Father Name</label><input type="text" id="tv-fname" required></div>  
+                <div class="input-group"><label>WhatsApp Number</label><input type="text" id="tv-whatsapp" required placeholder="e.g. 03XXXXXXXXX"></div>  
+                <button type="submit" class="btn btn-primary" style="width:100%;">Submit Verification Request</button>  
+            </form>  
+        </div>  
+    </div>  
+</div>  
+
+<script type="module">
+    import { auth, db, ref, onValue, get, set, update, signOut, onAuthStateChanged, updateProfile, ADMIN_EMAIL } from "./js/firebase-config.js";
+    import { showToast, showLoader, hideLoader, openModal, closeTopModal } from "./js/common.js";
+    import { resolveImageUrl, setImgBbKey, uploadToImgBB } from "./js/img-uploader.js";
+
+    let currentUser = null;
+    let currentUserData = null;
+
+    showLoader();
+
+    onAuthStateChanged(auth, (user) => {
+        currentUser = user;
+        if(user) {
+            onValue(ref(db, `users/${user.uid}`), (snap) => {
+                currentUserData = snap.exists() ? snap.val() : null;
+                renderProfile();
+                hideLoader();
+            });
+        } else {
+            renderLoggedOut();
+            hideLoader();
+        }
+    });
+
+    onValue(ref(db, 'settings'), (snap) => {
+        if(snap.exists()) setImgBbKey(snap.val().imgbb_api_key || "");
+    });
+
+    function renderLoggedOut() {
+        document.getElementById('profile-content').innerHTML = `
+            <div style="text-align:center; padding: 40px 10px;">  
+                <i class="fas fa-user-circle" style="font-size: 60px; color: var(--border-color); margin-bottom: 16px;"></i>  
+                <h2>You are not logged in</h2>  
+                <p style="color:var(--text-muted); font-size:14px; margin: 16px 0;">Login or create an account to view profile and courses.</p>  
+                <button class="btn btn-primary" style="width:100%; padding:14px;" onclick="window.location.href='login.html'">Login / Register</button>  
+            </div>
+        `;
+    }
+
+    function renderProfile() {
+        const isAdmin = currentUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+        const isVerifiedTeacher = currentUserData && currentUserData.isTeacher === true;
+        const verificationStatus = currentUserData && currentUserData.verificationStatus;
+        const userAvatar = resolveImageUrl(currentUserData?.avatar || currentUser.photoURL, 'avatar');
+
+        let teacherActionHtml = "";
+        if (isVerifiedTeacher) {
+            teacherActionHtml = `<button class="btn btn-secondary" style="width:100%; padding:14px; margin-bottom:16px;" onclick="window.location.href='teacher-panel.html'"><i class="fas fa-chalkboard-teacher"></i> Open Teacher Panel</button>`;
+        } else if (verificationStatus === 'pending') {
+            teacherActionHtml = `<div style="background:#FEF3C7; color:#92400E; padding:12px; border-radius:8px; margin-bottom:16px; font-size:13px; text-align:center;"><i class="fas fa-clock"></i> Instructor Verification Pending with Admin...</div>`;
+        } else {
+            teacherActionHtml = `<button class="btn btn-outline" style="width:100%; padding:14px; margin-bottom:16px; border-color:var(--primary); color:var(--primary);" id="btn-apply-teacher"><i class="fas fa-id-card"></i> Apply as Instructor / Teacher</button>`;
+        }
+
+        document.getElementById('profile-content').innerHTML = `
+            <div style="text-align:center; padding: 20px 0; position:relative;">  
+                <img src="${userAvatar}" style="width:84px; height:84px; border-radius:50%; object-fit:cover; margin-bottom:10px; border:2px solid var(--border-color);">  
+                <h2>${currentUserData?.name || currentUser.displayName || 'Student'} ${isVerifiedTeacher ? '<i class="fas fa-check-circle" style="color:var(--blue-tick);"></i>' : ''}</h2>  
+                <p style="color:var(--text-muted); font-size:14px; margin-bottom:8px;">${currentUser.email}</p>  
+                <div style="display:flex; justify-content:center; gap:6px; flex-wrap:wrap; margin-bottom:16px;">
+                    ${currentUserData?.lifetimePdfAccess ? `<span class="badge badge-pdf"><i class="fas fa-crown"></i> Lifetime PDF Member</span>` : ''}  
+                    ${currentUserData?.lifetimeAllCoursesAccess ? `<span class="badge" style="background:#DD2476;"><i class="fas fa-crown"></i> All-Courses VIP Member</span>` : ''}  
+                </div>
+                <button class="btn btn-outline" id="btn-edit-profile" style="margin-bottom: 10px;"><i class="fas fa-edit"></i> Edit Profile</button>  
+            </div>  
+              
+            ${isAdmin ? `<button class="btn btn-primary" style="width:100%; padding:14px; margin-bottom:16px; background:#4F46E5;" onclick="window.location.href='admin-panel.html'"><i class="fas fa-shield-alt"></i> Open Admin Panel</button>` : ''}  
+            ${teacherActionHtml}  
+              
+            <hr style="border:0; border-top:1px solid var(--border-color); margin: 16px 0;">  
+            <button class="btn btn-danger" style="width:100%; padding:14px;" id="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</button>  
+        `;
+
+        document.getElementById('btn-edit-profile')?.addEventListener('click', () => {
+            document.getElementById('ep-name').value = currentUserData?.name || currentUser.displayName || "";
+            openModal('modal-edit-profile');
+        });
+
+        document.getElementById('btn-apply-teacher')?.addEventListener('click', () => {
+            openModal('modal-teacher-verification');
+        });
+
+        document.getElementById('btn-logout')?.addEventListener('click', async () => {
+            showLoader();
+            await signOut(auth);
+            showToast("Logged out successfully");
+            window.location.href = 'index.html';
+        });
+    }
+
+    document.getElementById('form-edit-profile').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        showLoader();
+        try {
+            const newName = document.getElementById('ep-name').value.trim();
+            const isAdmin = currentUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
+            let avatarUrl = null;
+            const fileInput = document.getElementById('ep-avatar');
+
+            if(fileInput.files.length > 0) {
+                if(!isAdmin) {
+                    const lastUpdate = currentUserData?.lastAvatarUpdate || 0;
+                    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+                    if(Date.now() - lastUpdate < thirtyDays) {
+                        showToast("You can only change profile picture once every 30 days.", "error");
+                        hideLoader();
+                        return;
+                    }
+                }
+                avatarUrl = await uploadToImgBB('ep-avatar');
+            }
+
+            await updateProfile(currentUser, { displayName: newName });
+            const updates = { name: newName };
+            if(avatarUrl) {
+                updates.avatar = avatarUrl;
+                updates.lastAvatarUpdate = Date.now();
+            }
+
+            await update(ref(db, `users/${currentUser.uid}`), updates);
+            showToast("Profile updated successfully!", "success");
+            closeTopModal();
+        } catch(err) {
+            showToast("Error updating profile", "error");
+        }
+        hideLoader();
+    });
+
+    document.getElementById('form-teacher-verification').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        showLoader();
+        try {
+            const name = document.getElementById('tv-name').value.trim();
+            const fname = document.getElementById('tv-fname').value.trim();
+            const whatsapp = document.getElementById('tv-whatsapp').value.trim();
+
+            await set(ref(db, `teacher_requests/${currentUser.uid}`), {
+                uid: currentUser.uid,
+                name: name,
+                fname: fname,
+                whatsapp: whatsapp,
+                email: currentUser.email,
+                status: 'pending',
+                timestamp: Date.now()
+            });
+
+            await update(ref(db, `users/${currentUser.uid}`), { verificationStatus: 'pending' });
+            showToast("Verification request submitted successfully!", "success");
+            closeTopModal();
+        } catch(err) {
+            showToast("Error submitting request", "error");
+        }
+        hideLoader();
+    });
+</script>
+</body>
+</html>
