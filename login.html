@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MDA - Login / Register</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="global-loader"><div class="spinner"></div><div style="margin-top:10px;font-weight:500;">Loading...</div></div>  
+<div id="toast-container"></div>  
+
+<div id="app-container">  
+    <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">  
+        <header>  
+            <a href="index.html" class="header-brand">MDA Mustafa Digital Academy</a>  
+            <a href="index.html" style="color:var(--text-muted); font-size:14px; text-decoration:none;"><i class="fas fa-arrow-left"></i> Home</a>  
+        </header>  
+
+        <main id="main-content" style="max-width:440px;">  
+            <!-- لاگ ان باکس -->
+            <div id="box-login">  
+                <div style="text-align: center; margin-bottom: 24px; margin-top: 20px;">  
+                    <h1 style="color: var(--primary); font-size: 26px;">Welcome Back</h1>  
+                    <p style="color: var(--text-muted); margin-top: 6px; font-size:14px;">Login to access your courses</p>  
+                </div>  
+                <form id="form-login">  
+                    <div class="input-group">
+                        <label>Email</label>
+                        <input type="email" id="login-email" required>
+                    </div>  
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="login-password" required>
+                    </div>  
+                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; margin-top: 8px;">Login</button>  
+                </form>  
+                <button type="button" class="btn-google" id="btn-google-login">  
+                    <i class="fab fa-google" style="color: #EA4335;"></i> Continue with Google  
+                </button>  
+                <p style="text-align: center; margin-top: 20px; font-size: 14px;">  
+                    Don't have an account? <span style="color: var(--primary); cursor: pointer; font-weight:600;" id="switch-to-reg">Register</span>  
+                </p>  
+            </div>  
+
+            <!-- رجسٹر باکس -->
+            <div id="box-register" class="hidden">  
+                <div style="text-align: center; margin-bottom: 24px; margin-top: 20px;">  
+                    <h1 style="color: var(--primary); font-size: 26px;">Create Account</h1>  
+                    <p style="color: var(--text-muted); margin-top: 6px; font-size:14px;">Start learning digital skills today</p>  
+                </div>  
+                <form id="form-register">  
+                    <div class="input-group">
+                        <label>Full Name</label>
+                        <input type="text" id="reg-name" required>
+                    </div>  
+                    <div class="input-group">
+                        <label>Email</label>
+                        <input type="email" id="reg-email" required>
+                    </div>  
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="reg-password" required minlength="6">
+                    </div>  
+                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; margin-top: 8px;">Register</button>  
+                </form>  
+                <button type="button" class="btn-google" id="btn-google-reg">  
+                    <i class="fab fa-google" style="color: #EA4335;"></i> Sign up with Google  
+                </button>  
+                <p style="text-align: center; margin-top: 20px; font-size: 14px;">  
+                    Already have an account? <span style="color: var(--primary); cursor: pointer; font-weight:600;" id="switch-to-login">Login</span>  
+                </p>  
+            </div>  
+        </main>  
+    </div>  
+</div>  
+
+<script type="module">
+    import { auth, db, ref, set, get, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "./js/firebase-config.js";
+    import { showToast, showLoader, hideLoader } from "./js/common.js";
+
+    onAuthStateChanged(auth, (user) => {
+        if(user) {
+            window.location.href = 'profile.html';
+        }
+    });
+
+    document.getElementById('switch-to-reg').addEventListener('click', () => {
+        document.getElementById('box-login').classList.add('hidden');
+        document.getElementById('box-register').classList.remove('hidden');
+    });
+
+    document.getElementById('switch-to-login').addEventListener('click', () => {
+        document.getElementById('box-register').classList.add('hidden');
+        document.getElementById('box-login').classList.remove('hidden');
+    });
+
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        showLoader();
+        try {
+            await signInWithEmailAndPassword(auth, document.getElementById('login-email').value.trim(), document.getElementById('login-password').value);
+            showToast("Login Successful!", "success");
+            window.location.href = 'index.html';
+        } catch(err) {
+            showToast("Invalid email or password", "error");
+        }
+        hideLoader();
+    });
+
+    document.getElementById('form-register').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        showLoader();
+        const name = document.getElementById('reg-name').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
+        const password = document.getElementById('reg-password').value;
+
+        try {
+            const cred = await createUserWithEmailAndPassword(auth, email, password);
+            await updateProfile(cred.user, { displayName: name });
+            await set(ref(db, `users/${cred.user.uid}`), {
+                name: name,
+                email: email,
+                isTeacher: false,
+                lifetimePdfAccess: false,
+                lifetimeAllCoursesAccess: false,
+                createdAt: Date.now()
+            });
+            showToast("Account Created Successfully!", "success");
+            window.location.href = 'index.html';
+        } catch(err) {
+            showToast("Registration failed: " + err.message, "error");
+        }
+        hideLoader();
+    });
+
+    async function handleGoogleAuth() {
+        showLoader();
+        try {
+            const provider = new GoogleAuthProvider();
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+
+            const userRef = ref(db, `users/${user.uid}`);
+            const snap = await get(userRef);
+            if(!snap.exists()) {
+                await set(userRef, {
+                    name: user.displayName || "Student",
+                    email: user.email || "",
+                    avatar: user.photoURL || "",
+                    isTeacher: false,
+                    lifetimePdfAccess: false,
+                    lifetimeAllCoursesAccess: false,
+                    createdAt: Date.now()
+                });
+            }
+            showToast("Google Sign-In Successful!", "success");
+            window.location.href = 'index.html';
+        } catch(err) {
+            showToast("Google Sign-In Failed", "error");
+        }
+        hideLoader();
+    }
+
+    document.getElementById('btn-google-login').addEventListener('click', handleGoogleAuth);
+    document.getElementById('btn-google-reg').addEventListener('click', handleGoogleAuth);
+</script>
+</body>
+</html>
