@@ -1,0 +1,245 @@
+:root {  
+    --primary: #4F46E5;  
+    --primary-dark: #4338CA;  
+    --secondary: #10B981;  
+    --bg-color: #F3F4F6;  
+    --card-bg: #FFFFFF;  
+    --text-main: #111827;  
+    --text-muted: #6B7280;  
+    --border-color: #E5E7EB;  
+    --danger: #EF4444;  
+    --warning: #F59E0B;  
+    --purple: #8B5CF6;  
+    --blue-tick: #3B82F6;
+    --nav-height: calc(60px + env(safe-area-inset-bottom));  
+}  
+
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+    font-family: 'Inter', sans-serif; 
+    -webkit-tap-highlight-color: transparent; 
+}  
+
+body { 
+    background-color: var(--bg-color); 
+    color: var(--text-main); 
+    overflow-x: hidden; 
+}  
+
+.hidden { display: none !important; }  
+
+/* بٹنز */
+.btn { 
+    padding: 10px 16px; 
+    border-radius: 8px; 
+    border: none; 
+    font-weight: 500; 
+    cursor: pointer; 
+    transition: 0.2s; 
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 8px; 
+    font-size: 14px; 
+    text-decoration: none;
+}  
+.btn-sm { padding: 6px 10px; font-size: 12px; }  
+.btn-primary { background: var(--primary); color: white; }  
+.btn-primary:active { background: var(--primary-dark); }  
+.btn-secondary { background: var(--secondary); color: white; }  
+.btn-danger { background: var(--danger); color: white; }  
+.btn-warning { background: var(--warning); color: white; }  
+.btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); }  
+.btn-google { 
+    background: #FFFFFF; 
+    border: 1px solid var(--border-color); 
+    color: #374151; 
+    font-weight: 600; 
+    width: 100%; 
+    padding: 12px; 
+    margin-top: 10px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 10px; 
+    cursor: pointer;
+    border-radius: 8px;
+}  
+.btn:disabled { opacity: 0.6; pointer-events: none; }  
+
+/* ان پٹ کنٹرولز */
+.input-group { margin-bottom: 16px; }  
+.input-group label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: var(--text-muted); }  
+.input-group input, .input-group select, .input-group textarea { 
+    width: 100%; 
+    padding: 10px 12px; 
+    border: 1px solid var(--border-color); 
+    border-radius: 8px; 
+    outline: none; 
+    font-size: 14px; 
+    background: #fff;
+}  
+.input-group input:focus, .input-group select:focus, .input-group textarea:focus { border-color: var(--primary); }  
+
+/* لے آؤٹ اور نیویگیشن */
+#app-container { display: flex; flex-direction: column; min-height: 100vh; }  
+header { 
+    background: var(--card-bg); 
+    height: max(60px, calc(60px + env(safe-area-inset-top))); 
+    padding-top: env(safe-area-inset-top); 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    padding-left: 16px; 
+    padding-right: 16px; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+    position: sticky;
+    top: 0;
+    z-index: 40; 
+}  
+.header-brand { font-size: 16px; font-weight: 700; color: var(--primary); text-decoration: none; }  
+
+#main-content { 
+    flex: 1; 
+    padding: 16px; 
+    padding-bottom: calc(var(--nav-height) + 20px); 
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+}  
+
+#bottom-nav { 
+    position: fixed; 
+    bottom: 0; 
+    left: 0; 
+    right: 0; 
+    height: var(--nav-height); 
+    background: var(--card-bg); 
+    box-shadow: 0 -1px 3px rgba(0,0,0,0.1); 
+    display: flex; 
+    justify-content: space-around; 
+    align-items: center; 
+    padding-bottom: env(safe-area-inset-bottom); 
+    z-index: 40; 
+}  
+.nav-item { 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    color: var(--text-muted); 
+    text-decoration: none; 
+    font-size: 11px; 
+    flex: 1; 
+    min-width: 60px; 
+    height: 100%; 
+    cursor: pointer; 
+}  
+.nav-item i { font-size: 20px; margin-bottom: 4px; }  
+.nav-item.active { color: var(--primary); }  
+
+/* گرڈ و کارڈز */
+.grid-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }  
+@media (min-width: 600px) { .grid-cards { grid-template-columns: repeat(3, 1fr); } }  
+@media (min-width: 1024px) { .grid-cards { grid-template-columns: repeat(4, 1fr); } }  
+
+.card { 
+    background: var(--card-bg); 
+    border-radius: 12px; 
+    overflow: hidden; 
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
+    margin-bottom: 16px; 
+    display: flex; 
+    flex-direction: column; 
+    position: relative;
+}  
+.card-img { width: 100%; height: 120px; object-fit: cover; background: #E5E7EB; flex-shrink: 0; cursor: pointer; }  
+.card-img-pdf { height: 160px; object-fit: contain; background: #fff; padding: 10px; }  
+.card-body { padding: 12px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }  
+.card-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; line-height: 1.3; }  
+.card-price { font-weight: 700; color: var(--primary); font-size: 14px; }  
+.card-original-price { font-size: 11px; color: var(--text-muted); text-decoration: line-through; margin-right: 4px; }
+.instructor-name { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; display: flex; align-items: center; gap: 4px; }  
+
+.card.card-full { grid-column: 1 / -1; }  
+.card.card-full .card-img { height: 180px; }  
+.card.card-full .card-title { font-size: 16px; }  
+
+/* بیجز */
+.badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; color: white; background: var(--primary); width: max-content; }  
+.badge-free { background: var(--secondary); }  
+.badge-live { background: var(--danger); }  
+.badge-pdf { background: var(--purple); }  
+.badge-discount { background: #DC2626; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+
+/* والٹس و وی آئی پی بینرز */
+.wallet-card { background: linear-gradient(135deg, #4F46E5, #3B82F6); color: white; padding: 16px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }  
+.wallet-card h3 { font-size: 14px; opacity: 0.9; margin-bottom: 4px; }  
+.wallet-card h1 { font-size: 24px; font-weight: 700; margin-bottom: 12px; }  
+
+.premium-package-box { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }  
+.premium-package-box h3 { font-size: 18px; margin-bottom: 8px; }  
+.premium-package-box p { font-size: 13px; opacity: 0.9; margin-bottom: 16px; }  
+
+.all-courses-package-box { background: linear-gradient(135deg, #FF512F, #DD2476); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+.all-courses-package-box h3 { font-size: 18px; margin-bottom: 8px; }
+.all-courses-package-box p { font-size: 13px; opacity: 0.9; margin-bottom: 16px; }
+
+/* سلائیڈر */
+.slider-container { position: relative; width: 100%; height: 180px; border-radius: 12px; overflow: hidden; margin-bottom: 20px; background: #ddd; }  
+.slider-track { display: flex; width: 100%; height: 100%; transition: transform 0.5s ease-in-out; }  
+.slide-item { min-width: 100%; height: 100%; position: relative; cursor: pointer; }  
+.slide-item img { width: 100%; height: 100%; object-fit: cover; }  
+.slide-item .overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.6), transparent); display: flex; flex-direction: column; justify-content: flex-end; padding: 16px; }  
+.hero-tag { background: var(--warning); color: white; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; width: fit-content; margin-bottom: 8px; }  
+
+/* سرچ باکس */
+.search-box { display: flex; align-items: center; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; margin-bottom: 16px; }  
+.search-box i { color: var(--text-muted); margin-right: 8px; }  
+.search-box input { border: none; outline: none; background: transparent; width: 100%; font-size: 14px; }  
+
+/* ماڈلز اور ڈائیلاگز */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: none; justify-content: center; align-items: center; padding: 16px; }  
+.modal-overlay.active { display: flex; }  
+.modal-content { background: var(--card-bg); width: 100%; max-width: 500px; max-height: 90vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; animation: scaleIn 0.2s ease; }  
+@keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }  
+.modal-header { padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }  
+.modal-body { padding: 16px; overflow-y: auto; flex: 1; }  
+.close-modal { background: none; border: none; font-size: 24px; color: var(--text-muted); cursor: pointer; padding: 5px 10px; margin: -5px -10px; }  
+
+/* گلوبل لوڈر اور ٹوسٹ */
+#global-loader { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; }  
+.spinner { width: 40px; height: 40px; border: 4px solid var(--border-color); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }  
+@keyframes spin { to { transform: rotate(360deg); } }  
+  
+#toast-container { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 9998; display: flex; flex-direction: column; gap: 8px; width: 90%; max-width: 400px; pointer-events: none; }  
+.toast { background: #333; color: white; padding: 12px 16px; border-radius: 8px; font-size: 14px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); animation: fadeUp 0.3s forwards; }  
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }  
+
+/* فل اسکرین ویڈیو پلیئر */
+#fullscreen-video-overlay { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }  
+#fs-video-player { width: 100%; height: 100%; outline: none; border: none; background: #000; }  
+.close-fs-btn { position: absolute; top: max(20px, env(safe-area-inset-top)); left: 20px; z-index: 10000; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(5px); }  
+
+.lesson-item { background: var(--bg-color); padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 1px solid var(--border-color); }  
+.list-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border-color); }  
+.post-action { display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 8px 0; }  
+.post-action.liked i { color: var(--danger); font-weight: 900; }  
+.post-action.saved i { color: var(--primary); font-weight: 900; }  
+
+.days-checkboxes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.days-checkboxes label { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: normal; background: #e5e7eb; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+.days-checkboxes input:checked + span { font-weight: bold; color: var(--primary); }
+
+.copy-btn { background: #4F46E5; color: #fff; border: none; border-radius: 4px; padding: 2px 8px; font-size: 11px; cursor: pointer; margin-left: 6px; }
+.copy-btn:hover { background: #4338CA; }
+
+/* ڈیسک ٹاپ سائیڈ بار ایڈاپشن */
+@media (min-width: 768px) {  
+    #app-container { flex-direction: row; }  
+    #bottom-nav { position: static; flex-direction: column; width: 90px; height: 100vh; justify-content: flex-start; padding-top: 20px; flex-shrink: 0; }  
+    .nav-item { height: 80px; flex: none; }  
+    #main-content { padding-bottom: 20px; }  
+}
