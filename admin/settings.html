@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platform Settings</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="toast-container"></div>
+<header>  
+    <span class="header-brand">Platform Settings</span>  
+    <a href="../admin-panel.html" class="btn btn-outline btn-sm"><i class="fas fa-arrow-left"></i> Back to Admin</a>  
+</header>
+<main id="main-content" style="max-width:600px; margin-top:20px;">
+    <div class="card card-body">
+        <div class="input-group"><label>ImgBB API Key</label><input type="text" id="admin-imgbb-key"></div>  
+        <div class="input-group"><label>Lifetime PDF Package Price (Rs)</label><input type="number" id="admin-pdf-package-price"></div>  
+        <div class="input-group"><label>Lifetime All Courses Package Price (Rs)</label><input type="number" id="admin-all-courses-package-price"></div>  
+        <hr style="margin: 16px 0; border:0; border-top:1px solid var(--border-color);">
+        <p style="font-weight:600; margin-bottom:10px; color:var(--primary);">Default Platform Bank Account</p>
+        <div class="input-group"><label>Bank / Provider Name</label><input type="text" id="admin-bank-name"></div>  
+        <div class="input-group"><label>Account Holder Name</label><input type="text" id="admin-account-holder"></div>  
+        <div class="input-group"><label>Account / Phone Number</label><input type="text" id="admin-account-number"></div>  
+        <button class="btn btn-primary" id="btn-save-settings" style="width:100%;">Save Platform Settings</button>  
+    </div>
+</main>
+<script type="module">
+    import { auth, db, ref, onValue, update, onAuthStateChanged, ADMIN_EMAIL } from "../js/firebase-config.js";
+    import { showToast } from "../js/common.js";
+
+    onAuthStateChanged(auth, user => {
+        if(!user || user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) window.location.href = '../index.html';
+    });
+
+    onValue(ref(db, 'settings'), snap => {
+        if(snap.exists()) {
+            const s = snap.val();
+            document.getElementById('admin-imgbb-key').value = s.imgbb_api_key || "";
+            document.getElementById('admin-pdf-package-price').value = s.pdf_package_price || 0;
+            document.getElementById('admin-all-courses-package-price').value = s.all_courses_package_price || 0;
+            if(s.admin_bank) {
+                document.getElementById('admin-bank-name').value = s.admin_bank.bankName || "";
+                document.getElementById('admin-account-holder').value = s.admin_bank.holderName || "";
+                document.getElementById('admin-account-number').value = s.admin_bank.accountNumber || "";
+            }
+        }
+    });
+
+    document.getElementById('btn-save-settings').addEventListener('click', async () => {
+        await update(ref(db, 'settings'), {
+            imgbb_api_key: document.getElementById('admin-imgbb-key').value.trim(),
+            pdf_package_price: Number(document.getElementById('admin-pdf-package-price').value) || 0,
+            all_courses_package_price: Number(document.getElementById('admin-all-courses-package-price').value) || 0,
+            admin_bank: {
+                bankName: document.getElementById('admin-bank-name').value.trim(),
+                holderName: document.getElementById('admin-account-holder').value.trim(),
+                accountNumber: document.getElementById('admin-account-number').value.trim()
+            }
+        });
+        showToast("Settings Saved Successfully!", "success");
+    });
+</script>
+</body>
+</html>
