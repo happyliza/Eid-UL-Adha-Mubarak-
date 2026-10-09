@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Home Banners</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="toast-container"></div>
+<header>  
+    <span class="header-brand">Manage Banners</span>  
+    <a href="../admin-panel.html" class="btn btn-outline btn-sm"><i class="fas fa-arrow-left"></i> Back to Admin</a>  
+</header>
+<main id="main-content" style="max-width:700px; margin-top:20px;">
+    <div class="card card-body" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:12px;">Add New Banner</h3>
+        <form id="form-add-banner">  
+            <div class="input-group"><label>Banner Image</label><input type="file" id="ab-image" accept="image/*" required></div>  
+            <div class="input-group"><label>Course Tag (e.g. 50% OFF)</label><input type="text" id="ab-tag"></div>  
+            <div class="input-group"><label>Link to Course</label><select id="ab-course"></select></div>  
+            <div class="input-group"><label>Special Banner Discount (%)</label><input type="number" id="ab-discount"></div>  
+            <button type="submit" class="btn btn-primary" style="width:100%;"><i class="fas fa-upload"></i> Upload Banner</button>  
+        </form>
+    </div>
+    <div class="card card-body" style="padding:0;">
+        <div id="banners-list"></div>
+    </div>
+</main>
+<script type="module">
+    import { auth, db, ref, onValue, set, remove, push, onAuthStateChanged, ADMIN_EMAIL } from "../js/firebase-config.js";
+    import { showToast } from "../js/common.js";
+    import { uploadToImgBB, setImgBbKey } from "../js/img-uploader.js";
+
+    onAuthStateChanged(auth, user => {
+        if(!user || user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) window.location.href = '../index.html';
+    });
+
+    onValue(ref(db, 'settings'), snap => {
+        if(snap.exists()) setImgBbKey(snap.val().imgbb_api_key || "");
+    });
+
+    onValue(ref(db, 'courses'), snap => {
+        const sel = document.getElementById('ab-course');
+        let html = '<option value="">None (Image Only)</option>';
+        if(snap.exists()) snap.forEach(c => html += `<option value="${c.key}">${c.val().title}</option>`);
+        sel.innerHTML = html;
+    });
+
+    onValue(ref(db, 'home_banners'), snap => {
+        const list = document.getElementById('banners-list');
+        let html = "";
+        if(snap.exists()) {
+            snap.forEach(c => {
+                const b = { id: c.key, ...c.val() };
+                html += `
+                    <div class="list-row" style="padding:10px; display:flex; align-items:center; border-bottom:1px solid var(--border-color);">  
+                        <img src="${b.image}" style="width:60px; height:35px; object-fit:cover; border-radius:4px;">  
+                        <div style="flex:1; padding-left:12px;">${b.tag || 'Banner'} ${b.discount ? `(${b.discount}% OFF)` : ''}</div>  
+                        <button class="btn btn-danger btn-sm" onclick="window.deleteBanner('${b.id}')"><i class="fas fa-trash"></i></button>  
+                    </div>  
+                `;
+            });
+        }
+        list.innerHTML = html || '<p style="padding:16px; text-align:center;">No banners added yet.</p>';
+    });
+
+    document.getElementById('form-add-banner').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+            const imgUrl = await uploadToImgBB('ab-image');
+            if(!imgUrl) return;
+            await set(push(ref(db, 'home_banners')), {
+                image: imgUrl,
+                tag: document.getElementById('ab-tag').value.trim(),
+                courseId: document.getElementById('ab-course').value,
+                discount: Number(document.getElementById('ab-discount').value) || 0,
+                createdAt: Date.now()
+            });
+            showToast("Banner Added Successfully!", "success");
+            document.getElementById('form-add-banner').reset();
+        } catch(e) {}
+    });
+
+    window.deleteBanner = async function(id) {
+        if(!confirm("Delete this banner?")) return;
+        await remove(ref(db, `home_banners/${id}`));
+        showToast("Banner Deleted", "success");
+    };
+</script>
+</body>
+</html>
