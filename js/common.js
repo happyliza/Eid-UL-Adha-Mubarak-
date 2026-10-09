@@ -13,18 +13,13 @@ export function showToast(message, type = "info") {
     toast.style.backgroundColor = type === "error" ? "var(--danger)" : type === "success" ? "var(--secondary)" : "#333";
     toast.innerText = message;
     container.appendChild(toast);
-    setTimeout(() => { toast.remove(); }, 3500);
+    setTimeout(() => { toast.remove(); }, 3000);
 }
 
+// اب لوڈر پوری اسکرین کو جام نہیں کرے گا
 export function showLoader() {
-    let el = document.getElementById('global-loader');
-    if (!el) {
-        el = document.createElement('div');
-        el.id = 'global-loader';
-        el.innerHTML = '<div class="spinner"></div><div style="margin-top:10px;font-weight:500;">Loading...</div>';
-        document.body.appendChild(el);
-    }
-    el.style.display = 'flex';
+    const el = document.getElementById('global-loader');
+    if (el) el.style.display = 'none'; // اسکرین بلاک نہ ہو
 }
 
 export function hideLoader() {
@@ -63,7 +58,7 @@ export function closeTopModal() {
 
 export function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
-        showToast("Account number copied!", "success");
+        showToast("Copied to clipboard!", "success");
     }).catch(() => {
         showToast("Failed to copy", "error");
     });
