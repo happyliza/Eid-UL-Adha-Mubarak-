@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MDA - Secure Checkout & Payment</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="toast-container"></div>  
+
+<div id="app-container">  
+    <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">  
+        <header>  
+            <a href="index.html" class="header-brand">MDA Mustafa Digital Academy</a>  
+            <button class="btn btn-outline btn-sm" onclick="window.history.back()"><i class="fas fa-arrow-left"></i> Back</button>  
+        </header>  
+
+        <main id="main-content" style="max-width:600px; margin: 0 auto; width:100%; padding-top:20px;">  
+            <h2 style="margin-bottom: 16px;"><i class="fas fa-shield-alt" style="color:var(--primary);"></i> Secure Enrollment & Checkout</h2>
+
+            <!-- آرڈر کی تفصیلات -->
+            <div class="card card-body" style="margin-bottom:16px;">
+                <h3 style="font-size:16px; margin-bottom:10px;">Order Summary</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span style="font-weight:600;" id="co-item-name">Loading...</span>
+                    <span class="badge" id="co-item-badge">Item</span>
+                </div>
+                <div style="font-size:13px; color:var(--text-muted); margin-bottom:10px;" id="co-instructor-info">Instructor: Loading...</div>
+                <div style="font-size:12px; background:#EEF2FF; color:var(--primary); padding:8px; border-radius:6px; margin-bottom:12px;" id="co-auth-notice">
+                    <i class="fas fa-key"></i> <strong>Authorization to Grant:</strong> <span id="co-auth-text">Full Access</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-color); padding-top:10px;">
+                    <span style="font-size:15px; font-weight:600;">Total Amount:</span>
+                    <span style="font-size:20px; font-weight:700; color:var(--primary);" id="co-item-price">Rs 0</span>
+                </div>
+            </div>
+
+            <!-- بینک اکاؤنٹ کی معلومات -->
+            <div class="card card-body" style="background:#FFFBEB; border:1px solid #FDE68A; margin-bottom:16px;">
+                <p style="font-size:14px; font-weight:700; color:#92400E; margin-bottom:8px;"><i class="fas fa-university"></i> Official Payment Details:</p>
+                <div id="co-account-details" style="font-size:13px; line-height:1.6; color:#78350F;">Loading payment account...</div>
+            </div>
+
+            <!-- پیمنٹ پروف فارم -->
+            <div class="card card-body">
+                <form id="form-checkout">
+                    <div class="input-group">
+                        <label>Payment Method Used</label>
+                        <select id="checkout-method" required>
+                            <option value="EasyPaisa">EasyPaisa</option>
+                            <option value="JazzCash">JazzCash</option>
+                            <option value="Bank Transfer">Bank Transfer / Meezan / Other</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Transaction ID (TID) / Reference No.</label>
+                        <input type="text" id="checkout-tid" required placeholder="e.g. 1234567890">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Payment Screenshot / Receipt</label>
+                        <input type="file" id="checkout-screenshot" accept="image/*" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="btn-submit-co" style="width:100%; padding:14px; font-size:16px; font-weight:600;">
+                        <i class="fas fa-check-circle"></i> Confirm & Submit Payment
+                    </button>
+                </form>
+            </div>
+        </main>  
+    </div>  
+</div>  
+
+<script type="module">
+    import { auth, db, ref, get, set, push, onValue, onAuthStateChanged } from "./js/firebase-config.js";
+    import { showToast, copyToClipboard } from "./js/common.js";
+    import { uploadToImgBB, setImgBbKey } from "./js/img-uploader.js";
+
+    let currentUser = null;
+    let checkoutData = null;
+    let adminBankDetails = { bankName: 'EasyPaisa / JazzCash / Bank', holderName: 'Nazim Mustafa', accountNumber: '03105784772' };
+    let teacherBankAccounts = {};
+
+    // 1. ڈیٹا ریڈ کرنا (SessionStorage یا URL پیرامیٹرز سے)
+    const rawSessionData = sessionStorage.getItem('mda_checkout_item');
+    if (rawSessionData) {
+        checkoutData = JSON.parse(rawSessionData);
+    } else {
+        const params = new URLSearchParams(window.location.search);
+        checkoutData = {
+            id: params.get('id') || 'UNKNOWN',
+            title: params.get('name') || 'Product',
+            price: Number(params.get('price')) || 0,
+            type: params.get('type') || 'course',
+            instructorId: params.get('instructorId') || 'admin',
+            instructorName: params.get('instructorName') || 'Mustafa Digital Academy'
+        };
+    }
+
+    if (!checkoutData || !checkoutData.id) {
+        showToast("Invalid checkout session. Redirecting...", "error");
+        setTimeout(() => window.location.href = 'index.html', 1500);
+    }
+
+    // 2. یوزر لاگ ان ویریفکیشن
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+            showToast("Please login to proceed with checkout", "warning");
+            setTimeout(() => window.location.href = 'login.html', 1000);
+            return;
+        }
+        currentUser = user;
+    });
+
+    // 3. سیٹنگز اور بینک اکاؤنٹس لوڈ کرنا
+    onValue(ref(db, 'settings'), (snap) => {
+        if (snap.exists()) {
+            const data = snap.val();
+            setImgBbKey(data.imgbb_api_key || "");
+            if (data.admin_bank) adminBankDetails = data.admin_bank;
+            renderPaymentUI();
+        }
+    });
+
+    onValue(ref(db, 'teacher_bank_accounts'), (snap) => {
+        teacherBankAccounts = snap.exists() ? snap.val() : {};
+        renderPaymentUI();
+    });
+
+    function renderPaymentUI() {
+        if (!checkoutData) return;
+
+        document.getElementById('co-item-name').innerText = checkoutData.title;
+        document.getElementById('co-item-price').innerText = `Rs ${checkoutData.price}`;
+        document.getElementById('co-instructor-info').innerText = `Instructor: ${checkoutData.instructorName || 'Mustafa Digital Academy'}`;
+
+        // بیج اور آتھرائزیشن ٹیکسٹ
+        const badgeEl = document.getElementById('co-item-badge');
+        const authText = document.getElementById('co-auth-text');
+
+        if (checkoutData.type === 'all_courses_package') {
+            badgeEl.innerText = 'VIP ACCESS';
+            badgeEl.className = 'badge';
+            badgeEl.style.background = '#DD2476';
+            authText.innerText = 'Unlocks ALL Current & Future Video Courses';
+        } else if (checkoutData.type === 'package') {
+            badgeEl.innerText = 'PDF PACKAGE';
+            badgeEl.className = 'badge badge-pdf';
+            authText.innerText = 'Unlocks Lifetime Access to All Library E-Books';
+        } else if (checkoutData.type === 'live') {
+            badgeEl.innerText = 'LIVE CLASS';
+            badgeEl.className = 'badge badge-live';
+            authText.innerText = 'Unlocks Live Class Session Link & Schedule Access';
+        } else if (checkoutData.type === 'pdf') {
+            badgeEl.innerText = 'E-BOOK';
+            badgeEl.className = 'badge badge-pdf';
+            authText.innerText = 'Unlocks Online Reading & Download for this Book';
+        } else {
+            badgeEl.innerText = 'COURSE';
+            badgeEl.className = 'badge';
+            authText.innerText = `Grants Lifetime Video Lectures Access to: ${checkoutData.title}`;
+        }
+
+        // بینک اکاؤنٹ ڈسپلے
+        const instId = checkoutData.instructorId;
+        const accBox = document.getElementById('co-account-details');
+
+        if (instId && instId !== 'admin' && teacherBankAccounts[instId]) {
+            const acc = teacherBankAccounts[instId];
+            accBox.innerHTML = `
+                Provider/Bank: <strong>${acc.bankName}</strong><br>
+                Account Holder: <strong>${acc.holderName}</strong><br>
+                Account/IBAN: <strong>${acc.accountNumber}</strong>
+                <button type="button" class="copy-btn" onclick="window.copyToClipboard('${acc.accountNumber}')"><i class="fas fa-copy"></i> Copy</button><br><br>
+                <small>Please transfer the exact amount of <strong>Rs ${checkoutData.price}</strong> to this instructor's account and upload receipt screenshot below.</small>
+            `;
+        } else {
+            accBox.innerHTML = `
+                Provider/Bank: <strong>${adminBankDetails.bankName}</strong><br>
+                Account Holder: <strong>${adminBankDetails.holderName}</strong><br>
+                Account Number: <strong>${adminBankDetails.accountNumber}</strong>
+                <button type="button" class="copy-btn" onclick="window.copyToClipboard('${adminBankDetails.accountNumber}')"><i class="fas fa-copy"></i> Copy</button><br><br>
+                <small>Please transfer the exact amount of <strong>Rs ${checkoutData.price}</strong> to this platform account and upload receipt screenshot below.</small>
+            `;
+        }
+    }
+
+    // 4. فارم سبمٹ کرنا مع مکمل آتھرائزیشن ڈیٹا
+    document.getElementById('form-checkout').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tid = document.getElementById('checkout-tid').value.trim();
+        if (!tid) {
+            showToast("Please enter Transaction ID", "warning");
+            return;
+        }
+
+        const btn = document.getElementById('btn-submit-co');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading Receipt...';
+
+        try {
+            const imgUrl = await uploadToImgBB('checkout-screenshot');
+            if (!imgUrl) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm & Submit Payment';
+                return;
+            }
+
+            // ریونیو کا حساب (40% کورس، 60% لائیو کلاس)
+            let teacherShare = 0;
+            let adminShare = Number(checkoutData.price);
+            if (checkoutData.instructorId && checkoutData.instructorId !== 'admin') {
+                if (checkoutData.type === 'course') {
+                    teacherShare = Math.round(Number(checkoutData.price) * 0.40);
+                    adminShare = Number(checkoutData.price) - teacherShare;
+                } else if (checkoutData.type === 'live') {
+                    teacherShare = Math.round(Number(checkoutData.price) * 0.60);
+                    adminShare = Number(checkoutData.price) - teacherShare;
+                }
+            }
+
+            // آتھرائزیشن ٹائپ طے کرنا
+            let grantType = "COURSE_ACCESS";
+            if (checkoutData.type === 'all_courses_package') grantType = "VIP_ALL_COURSES";
+            else if (checkoutData.type === 'package') grantType = "LIFETIME_PDF_PACKAGE";
+            else if (checkoutData.type === 'pdf') grantType = "SINGLE_PDF_ACCESS";
+            else if (checkoutData.type === 'live') grantType = "LIVE_CLASS_ACCESS";
+
+            const paymentPayload = {
+                uid: currentUser.uid,
+                userName: currentUser.displayName || "Student",
+                userEmail: currentUser.email,
+                itemId: checkoutData.id,
+                itemName: checkoutData.title,
+                itemType: checkoutData.type,
+                grantType: grantType,
+                instructorId: checkoutData.instructorId || 'admin',
+                instructorName: checkoutData.instructorName || 'Mustafa Digital Academy',
+                amount: Number(checkoutData.price),
+                teacherShare: teacherShare,
+                adminShare: adminShare,
+                method: document.getElementById('checkout-method').value,
+                transactionId: tid,
+                screenshotUrl: imgUrl,
+                status: 'pending',
+                timestamp: Date.now()
+            };
+
+            await set(push(ref(db, 'payment_requests')), paymentPayload);
+
+            sessionStorage.removeItem('mda_checkout_item');
+            showToast("Payment submitted successfully! Waiting for Admin approval.", "success");
+
+            setTimeout(() => {
+                window.location.href = 'my-learning.html';
+            }, 1500);
+
+        } catch (err) {
+            showToast("Payment submission failed: " + err.message, "error");
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm & Submit Payment';
+        }
+    });
+</script>
+</body>
+</html>
