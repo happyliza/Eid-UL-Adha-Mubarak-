@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MDA - Explore Courses & Live Classes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="global-loader"><div class="spinner"></div><div style="margin-top:10px;font-weight:500;">Loading...</div></div>  
+<div id="toast-container"></div>  
+
+<div id="app-container">  
+    <nav id="bottom-nav">  
+        <a class="nav-item" href="index.html"><i class="fas fa-home"></i>Home</a>  
+        <a class="nav-item active" href="explore.html"><i class="fas fa-compass"></i>Explore</a>  
+        <a class="nav-item" href="books.html"><i class="fas fa-book"></i>E-Books</a>  
+        <a class="nav-item" href="my-learning.html"><i class="fas fa-book-open"></i>My Learning</a>  
+        <a class="nav-item" href="community.html"><i class="fas fa-users"></i>Community</a>  
+        <a class="nav-item" href="profile.html"><i class="fas fa-user"></i>Profile</a>  
+    </nav>  
+
+    <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">  
+        <header>  
+            <a href="index.html" class="header-brand">MDA Mustafa Digital Academy</a>  
+            <div>
+                <a href="profile.html" style="color:var(--text-muted); font-size:20px; text-decoration:none;"><i class="fas fa-user-circle"></i></a>
+            </div>  
+        </header>  
+
+        <main id="main-content">  
+            <div class="search-box">  
+                <i class="fas fa-search"></i>  
+                <input type="text" id="explore-search-input" placeholder="Find courses, live classes...">  
+            </div>  
+
+            <!-- فلٹر بٹنز -->
+            <div style="display:flex; gap:10px; margin-bottom:16px; overflow-x:auto; padding-bottom:4px; flex-wrap:nowrap; white-space:nowrap;">  
+                <button class="btn btn-outline filter-btn active" data-filter="all">All</button>  
+                <button class="btn btn-outline filter-btn" data-filter="free">Free</button>  
+                <button class="btn btn-outline filter-btn" data-filter="paid">Paid</button>  
+                <button class="btn btn-outline filter-btn" data-filter="video">Video</button>  
+                <button class="btn btn-outline filter-btn" data-filter="live" style="color:var(--danger); border-color:var(--danger);"><i class="fas fa-circle" style="font-size:10px;"></i> Live</button>  
+            </div>  
+
+            <div id="explore-courses" class="grid-cards"></div>  
+        </main>  
+    </div>  
+</div>  
+
+<script type="module">
+    import { auth, db, ref, onValue, get, onAuthStateChanged } from "./js/firebase-config.js";
+    import { showToast, showLoader, hideLoader } from "./js/common.js";
+    import { resolveImageUrl } from "./js/img-uploader.js";
+
+    let currentUser = null;
+    let allCourses = [];
+    let allLiveClasses = [];
+    let currentFilter = 'all';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if(urlParams.get('filter')) currentFilter = urlParams.get('filter');
+
+    showLoader();
+
+    onAuthStateChanged(auth, (user) => {
+        currentUser = user;
+    });
+
+    onValue(ref(db, 'courses'), (snap) => {
+        allCourses = [];
+        if(snap.exists()) {
+            snap.forEach(c => allCourses.push({ id: c.key, ...c.val() }));
+        }
+        renderExplore();
+        hideLoader();
+    });
+
+    onValue(ref(db, 'live_classes'), (snap) => {
+        allLiveClasses = [];
+        if(snap.exists()) {
+            snap.forEach(c => allLiveClasses.push({ id: c.key, ...c.val() }));
+        }
+        if(currentFilter === 'live') renderExplore();
+    });
+
+    function renderExplore() {
+        const container = document.getElementById('explore-courses');
+        const q = document.getElementById('explore-search-input').value.toLowerCase();
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.toggle('btn-primary', btn.dataset.filter === currentFilter);
+            btn.classList.toggle('btn-outline', btn.dataset.filter !== currentFilter);
+        });
+
+        if(currentFilter === 'live') {
+            let filteredLive = allLiveClasses.filter(c => c.title.toLowerCase().includes(q));
+            if(filteredLive.length === 0) {
+                container.innerHTML = '<p style="font-size:14px;color:var(--text-muted); grid-column:1/-1; text-align:center; padding:20px;"><i class="fas fa-video-slash" style="font-size:40px; margin-bottom:10px; color:#ddd;"></i><br>No live classes available right now.</p>';
+                return;
+            }
+            container.innerHTML = filteredLive.map(lc => {
+                const img = resolveImageUrl(lc.thumbnail, 'course');
+                const priceText = lc.type === 'free' ? 'Free' : `Rs ${lc.price}`;
+                const badgeClass = lc.type === 'free' ? 'badge-free' : 'badge';
+                const badgeText = lc.type === 'free' ? 'FREE LIVE' : 'PREMIUM LIVE';
+                let packageHtml = (lc.frequency || lc.validity) ? `<div style="font-size:11px; background:#FEF3C7; color:#92400E; padding:4px 8px; border-radius:4px; margin-bottom:8px; font-weight:600; width:max-content;"><i class="fas fa-cube"></i> Package: ${lc.frequency || ''} ${lc.frequency && lc.validity ? '|' : ''} ${lc.validity || ''}</div>` : "";
+                let daysHtml = (lc.days && lc.days.length > 0) ? `<div style="font-size:11px; color:var(--primary); margin-bottom:4px; font-weight:600;"><i class="fas fa-calendar-week"></i> Days: ${lc.days.join(', ')}</div>` : "";
+
+                return `
+                    <div class="card card-full" onclick="window.joinLiveClass('${lc.id}')">
+                        <img class="card-img" src="${img}" alt="Live">
+                        <div class="card-body">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <span class="badge ${badgeClass}">${badgeText}</span>
+                                <span class="card-price" style="font-size:12px;">${priceText}</span>
+                            </div>
+                            <div class="card-title">${lc.title}</div>
+                            <div class="instructor-name">By: ${lc.instructorName || 'Mustafa Digital Academy'} <i class="fas fa-check-circle" style="color:var(--blue-tick);"></i></div>
+                            ${packageHtml}
+                            ${daysHtml}
+                            <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;"><i class="far fa-calendar"></i> Date: ${lc.date} | Time: ${lc.time} - ${lc.endtime || 'End'}</div>
+                            <button class="btn btn-danger btn-sm" style="width:100%;">Join Session</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            let filtered = allCourses.filter(c => c.title.toLowerCase().includes(q));
+            if(currentFilter !== 'all') filtered = filtered.filter(c => c.type === currentFilter);
+
+            if(filtered.length === 0) {
+                container.innerHTML = '<p style="font-size:14px;color:var(--text-muted); grid-column:1/-1; text-align:center;">No courses found.</p>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(course => {
+                const img = resolveImageUrl(course.thumbnail, 'course');
+                const badge = course.type === 'free' ? '<span class="badge badge-free">Free</span>' : '<span class="badge">Paid</span>';
+                let priceText = course.type === 'free' ? 'Free' : `Rs ${course.price}`;
+                let origPriceHtml = "";
+                let discountBadge = "";
+
+                if (course.type !== 'free' && course.originalPrice && Number(course.originalPrice) > Number(course.price)) {
+                    origPriceHtml = `<span class="card-original-price">Rs ${course.originalPrice}</span>`;
+                    const offPercent = Math.round(((Number(course.originalPrice) - Number(course.price)) / Number(course.originalPrice)) * 100);
+                    discountBadge = `<span class="badge-discount">${offPercent}% OFF</span>`;
+                }
+
+                const layoutClass = course.layout === 'full' ? 'card-full' : '';
+                return `
+                    <div class="card ${layoutClass}" onclick="window.location.href='course-details.html?id=${course.id}'">
+                        <img class="card-img" src="${img}" alt="Thumb">
+                        <div class="card-body">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">${badge} ${discountBadge}</div>
+                                <div class="card-title">${course.title}</div>
+                                <div class="instructor-name">By: ${course.instructorName || 'Mustafa Digital Academy'} <i class="fas fa-check-circle" style="color:var(--blue-tick);"></i></div>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                                <div>${origPriceHtml} <span class="card-price">${priceText}</span></div>
+                                <span style="font-size:12px; color:var(--primary); font-weight:600;">Details</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+
+    window.joinLiveClass = async function(classId) {
+        if(!currentUser) {
+            showToast("Login to join live classes", "warning");
+            setTimeout(() => window.location.href = 'login.html', 1000);
+            return;
+        }
+
+        const lc = allLiveClasses.find(c => c.id === classId);
+        if(!lc) return;
+
+        const now = new Date();
+        const startTimeMs = new Date(`${lc.date}T${lc.time}:00`).getTime();
+        const endTimeMs = new Date(`${lc.date}T${lc.endtime || lc.time}:00`).getTime();
+        const nowMs = now.getTime();
+
+        if (!isNaN(startTimeMs) && !isNaN(endTimeMs)) {
+            if (nowMs < startTimeMs) {
+                showToast(`Class is scheduled to start at ${lc.time} on ${lc.date}`, "warning");
+                return;
+            }
+            if (nowMs > endTimeMs) {
+                showToast(`This live session has ended (Time was ${lc.time} - ${lc.endtime})`, "error");
+                return;
+            }
+        }
+
+        if(lc.type === 'paid') {
+            const accessSnap = await get(ref(db, `live_access/${currentUser.uid}/${classId}`));
+            const userAccess = accessSnap.exists() ? accessSnap.val() : null;
+            const hasAccess = (lc.instructorId === currentUser.uid) || (userAccess && userAccess.status === 'active');
+
+            if(userAccess && userAccess.expiresAt && Date.now() > userAccess.expiresAt) {
+                showToast("Your live class validity has expired. Please renew.", "error");
+                return;
+            }
+
+            if(!hasAccess) {
+                showToast("Paid live class! Please purchase access from Home or Course Page.", "warning");
+                return;
+            }
+        }
+
+        window.open(lc.link, '_blank');
+    };
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentFilter = btn.dataset.filter;
+            renderExplore();
+        });
+    });
+
+    document.getElementById('explore-search-input').addEventListener('keyup', renderExplore);
+</script>
+</body>
+</html>
