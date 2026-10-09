@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Teacher Bank Accounts</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="toast-container"></div>
+<header>  
+    <span class="header-brand">Teacher Bank Accounts</span>  
+    <a href="../admin-panel.html" class="btn btn-outline btn-sm"><i class="fas fa-arrow-left"></i> Back to Admin</a>  
+</header>
+<main id="main-content" style="max-width:550px; margin-top:20px;">
+    <div class="card card-body">
+        <div class="input-group">
+            <label>Select Verified Teacher</label>
+            <select id="atb-teacher-select"></select>
+        </div>  
+        <form id="form-teacher-bank">  
+            <div class="input-group"><label>Bank / Provider Name</label><input type="text" id="atb-bank" required placeholder="e.g. Meezan Bank / EasyPaisa"></div>  
+            <div class="input-group"><label>Account Holder Name</label><input type="text" id="atb-holder" required></div>  
+            <div class="input-group"><label>Account / IBAN / Number</label><input type="text" id="atb-number" required></div>  
+            <button type="submit" class="btn btn-primary" style="width:100%;">Save Teacher Account</button>  
+        </form>
+    </div>
+</main>
+<script type="module">
+    import { auth, db, ref, onValue, get, set, onAuthStateChanged, ADMIN_EMAIL } from "../js/firebase-config.js";
+    import { showToast } from "../js/common.js";
+
+    onAuthStateChanged(auth, user => {
+        if(!user || user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) window.location.href = '../index.html';
+    });
+
+    onValue(ref(db, 'users'), snap => {
+        const sel = document.getElementById('atb-teacher-select');
+        let html = '<option value="">Select Teacher</option>';
+        if(snap.exists()) {
+            const users = snap.val();
+            for(let uid in users) {
+                if(users[uid].isTeacher) html += `<option value="${uid}">${users[uid].name} (${users[uid].email})</option>`;
+            }
+        }
+        sel.innerHTML = html;
+    });
+
+    document.getElementById('atb-teacher-select').addEventListener('change', async (e) => {
+        const uid = e.target.value;
+        if(!uid) return;
+        const snap = await get(ref(db, `teacher_bank_accounts/${uid}`));
+        if(snap.exists()) {
+            const acc = snap.val();
+            document.getElementById('atb-bank').value = acc.bankName || "";
+            document.getElementById('atb-holder').value = acc.holderName || "";
+            document.getElementById('atb-number').value = acc.accountNumber || "";
+        } else {
+            document.getElementById('form-teacher-bank').reset();
+        }
+    });
+
+    document.getElementById('form-teacher-bank').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const uid = document.getElementById('atb-teacher-select').value;
+        if(!uid) { showToast("Select a teacher first", "warning"); return; }
+        await set(ref(db, `teacher_bank_accounts/${uid}`), {
+            bankName: document.getElementById('atb-bank').value.trim(),
+            holderName: document.getElementById('atb-holder').value.trim(),
+            accountNumber: document.getElementById('atb-number').value.trim(),
+            updatedAt: Date.now()
+        });
+        showToast("Teacher Bank Account Saved Successfully!", "success");
+    });
+</script>
+</body>
+</html>
