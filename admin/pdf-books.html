@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage PDF Books</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="toast-container"></div>
+<header>  
+    <span class="header-brand">Manage PDF Books</span>  
+    <a href="../admin-panel.html" class="btn btn-outline btn-sm"><i class="fas fa-arrow-left"></i> Back to Admin</a>  
+</header>
+<main id="main-content" style="max-width:700px; margin-top:20px;">
+    <div class="card card-body" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:12px;">Upload New E-Book</h3>
+        <form id="form-add-pdf">  
+            <div class="input-group"><label>Book Title</label><input type="text" id="ap-title" required></div>  
+            <div class="input-group"><label>Google Drive Public Link</label><input type="url" id="ap-link" required></div>  
+            <div class="input-group"><label>Cover Image</label><input type="file" id="ap-thumb" accept="image/*" required></div>  
+            <div class="input-group">  
+                <label>Access Type</label>  
+                <select id="ap-type" required>  
+                    <option value="free">Free</option>  
+                    <option value="paid">Paid</option>  
+                </select>  
+            </div>  
+            <div class="input-group" id="ap-price-group" style="display:none;"><label>Price (Rs)</label><input type="number" id="ap-price" value="0"></div>  
+            <button type="submit" class="btn btn-primary" style="width:100%; background:var(--purple);"><i class="fas fa-upload"></i> Upload Book</button>  
+        </form>
+    </div>
+    <div class="card card-body" style="padding:0;">
+        <div id="pdf-list"></div>
+    </div>
+</main>
+<script type="module">
+    import { auth, db, ref, onValue, set, remove, push, onAuthStateChanged, ADMIN_EMAIL } from "../js/firebase-config.js";
+    import { showToast } from "../js/common.js";
+    import { uploadToImgBB, setImgBbKey } from "../js/img-uploader.js";
+
+    onAuthStateChanged(auth, user => {
+        if(!user || user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) window.location.href = '../index.html';
+    });
+
+    onValue(ref(db, 'settings'), snap => {
+        if(snap.exists()) setImgBbKey(snap.val().imgbb_api_key || "");
+    });
+
+    document.getElementById('ap-type').addEventListener('change', (e) => {
+        document.getElementById('ap-price-group').style.display = e.target.value === 'paid' ? 'block' : 'none';
+    });
+
+    onValue(ref(db, 'pdf_books'), snap => {
+        const list = document.getElementById('pdf-list');
+        let html = "";
+        if(snap.exists()) {
+            snap.forEach(c => {
+                const b = { id: c.key, ...c.val() };
+                html += `
+                    <div class="list-row" style="padding:10px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color);">  
+                        <div><strong>${b.title}</strong> (${b.type === 'free' ? 'Free' : 'Rs ' + b.price})</div>  
+                        <button class="btn btn-danger btn-sm" onclick="window.deleteBook('${b.id}')"><i class="fas fa-trash"></i></button>  
+                    </div>  
+                `;
+            });
+        }
+        list.innerHTML = html || '<p style="padding:16px; text-align:center;">No books uploaded yet.</p>';
+    });
+
+    document.getElementById('form-add-pdf').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+            const thumbUrl = await uploadToImgBB('ap-thumb');
+            if(!thumbUrl) return;
+            await set(push(ref(db, 'pdf_books')), {
+                title: document.getElementById('ap-title').value.trim(),
+                url: document.getElementById('ap-link').value.trim(),
+                thumbnail: thumbUrl,
+                type: document.getElementById('ap-type').value,
+                price: Number(document.getElementById('ap-price').value) || 0,
+                createdAt: Date.now()
+            });
+            showToast("Book Uploaded Successfully!", "success");
+            document.getElementById('form-add-pdf').reset();
+            document.getElementById('ap-price-group').style.display = 'none';
+        } catch(e) {}
+    });
+
+    window.deleteBook = async function(id) {
+        if(!confirm("Delete this book?")) return;
+        await remove(ref(db, `pdf_books/${id}`));
+        showToast("Deleted", "success");
+    };
+</script>
+</body>
+</html>
