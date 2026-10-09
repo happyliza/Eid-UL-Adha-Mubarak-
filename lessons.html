@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MDA - Course Lessons</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="global-loader"><div class="spinner"></div><div style="margin-top:10px;font-weight:500;">Loading...</div></div>  
+<div id="toast-container"></div>  
+
+<div id="app-container">  
+    <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">  
+        <header>  
+            <a href="index.html" class="header-brand">MDA Mustafa Digital Academy</a>  
+            <a href="my-learning.html" style="color:var(--text-muted); font-size:14px; text-decoration:none;"><i class="fas fa-arrow-left"></i> My Learning</a>  
+        </header>  
+
+        <main id="main-content">  
+            <h2 id="lesson-course-title" style="margin-bottom:16px;">Course Lessons</h2>  
+            <div id="lesson-list-content"></div>  
+        </main>  
+    </div>  
+</div>  
+
+<script type="module">
+    import { auth, db, ref, get, onAuthStateChanged, ADMIN_EMAIL } from "./js/firebase-config.js";
+    import { showToast, showLoader, hideLoader, playFullscreenVideo } from "./js/common.js";
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const courseId = urlParams.get('id');
+
+    showLoader();
+
+    onAuthStateChanged(auth, async (user) => {
+        if(!user) {
+            showToast("Login to view lessons", "warning");
+            window.location.href = 'login.html';
+            return;
+        }
+
+        if(!courseId) {
+            window.location.href = 'my-learning.html';
+            return;
+        }
+
+        const courseSnap = await get(ref(db, `courses/${courseId}`));
+        if(!courseSnap.exists()) {
+            document.getElementById('lesson-list-content').innerHTML = '<p>Course not found.</p>';
+            hideLoader();
+            return;
+        }
+        const course = courseSnap.val();
+        document.getElementById('lesson-course-title').innerText = course.title;
+
+        // ایکسس ویریفکیشن
+        const isAdmin = user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+        const isAuthor = course.instructorId === user.uid;
+        const uSnap = await get(ref(db, `users/${user.uid}`));
+        const hasAllCourses = uSnap.exists() && uSnap.val().lifetimeAllCoursesAccess === true;
+        const accessSnap = await get(ref(db, `course_access/${user.uid}/${courseId}`));
+        const hasAccess = isAdmin || isAuthor || hasAllCourses || (accessSnap.exists() && accessSnap.val().status === 'active');
+
+        if(!hasAccess && course.type !== 'free') {
+            showToast("You do not have access to this course.", "error");
+            window.location.href = `course-details.html?id=${courseId}`;
+            return;
+        }
+
+        loadLessons();
+    });
+
+    async function loadLessons() {
+        try {
+            const snap = await get(ref(db, `lessons/${courseId}`));
+            const list = document.getElementById('lesson-list-content');
+            if(!snap.exists()) {
+                list.innerHTML = '<p style="color:var(--text-muted);">No lessons uploaded yet.</p>';
+                hideLoader();
+                return;
+            }
+
+            let html = "";
+            let count = 1;
+            snap.forEach(child => {
+                const l = child.val();
+                html += `
+                    <div class="lesson-item" onclick="window.playLecture('${encodeURIComponent(l.url)}')">
+                        <div style="font-weight:500;">
+                            <i class="fas fa-play-circle" style="color:var(--primary); margin-right:8px;"></i> 
+                            Lesson ${count}: ${l.title}
+                        </div>
+                        <span style="font-size:12px; color:var(--text-muted);"><i class="fas fa-play"></i> Watch</span>
+                    </div>
+                `;
+                count++;
+            });
+            list.innerHTML = html;
+        } catch(e) {
+            document.getElementById('lesson-list-content').innerHTML = '<p style="color:var(--danger);">Error loading lessons.</p>';
+        }
+        hideLoader();
+    }
+
+    window.playLecture = function(encodedUrl) {
+        const url = decodeURIComponent(encodedUrl);
+        playFullscreenVideo(url);
+    };
+</script>
+</body>
+</html>
