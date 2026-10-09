@@ -1,0 +1,79 @@
+{
+  "settings": {
+    "imgbb_api_key": "",
+    "pdf_package_price": 1500,
+    "all_courses_package_price": 5000,
+    "admin_bank": {
+      "bankName": "EasyPaisa / JazzCash / Bank",
+      "holderName": "Nazim Mustafa",
+      "accountNumber": "03105784772"
+    }
+  },
+  "courses": {
+    "sample_course_1": {
+      "title": "Complete Digital Marketing Masterclass",
+      "description": "Learn SEO, Social Media Marketing, Ads running and client hunting from scratch.",
+      "type": "video",
+      "price": 2500,
+      "originalPrice": 5000,
+      "layout": "half",
+      "thumbnail": "default-course.png",
+      "instructorId": "admin",
+      "instructorName": "Mustafa Digital Academy",
+      "status": "published",
+      "createdAt": 1728500000000
+    }
+  },
+  "lessons": {
+    "sample_course_1": {
+      "lesson_1": {
+        "title": "Introduction & Orientation",
+        "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "createdAt": 1728500100000
+      }
+    }
+  },
+  "live_classes": {
+    "sample_live_1": {
+      "title": "Weekly Live Mentorship & Q/A",
+      "link": "https://meet.google.com/abc-defg-hij",
+      "date": "2026-10-15",
+      "time": "20:00",
+      "endtime": "21:30",
+      "type": "free",
+      "price": 0,
+      "days": ["Mon", "Wed", "Fri"],
+      "thumbnail": "default-course.png",
+      "instructorId": "admin",
+      "instructorName": "Nazim Mustafa",
+      "frequency": "Weekly 3 Days",
+      "validity": "1 Month",
+      "createdAt": 1728500200000
+    }
+  },
+  "pdf_books": {
+    "sample_book_1": {
+      "title": "Freelancing Success Blueprint PDF",
+      "url": "https://drive.google.com/file/d/1sampleLink/view",
+      "thumbnail": "default-book.png",
+      "type": "free",
+      "price": 0,
+      "createdAt": 1728500300000
+    }
+  },
+  "home_banners": {
+    "sample_banner_1": {
+      "image": "banners/banner1.png",
+      "tag": "50% OFF",
+      "courseId": "sample_course_1",
+      "discount": 50,
+      "createdAt": 1728500400000
+    }
+  },
+  "users": {},
+  "teacher_bank_accounts": {},
+  "teacher_wallets": {},
+  "payment_requests": {},
+  "withdrawal_requests": {},
+  "community": {}
+}
