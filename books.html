@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MDA - E-Books Library</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="global-loader"><div class="spinner"></div><div style="margin-top:10px;font-weight:500;">Loading...</div></div>  
+<div id="toast-container"></div>  
+
+<div id="app-container">  
+    <nav id="bottom-nav">  
+        <a class="nav-item" href="index.html"><i class="fas fa-home"></i>Home</a>  
+        <a class="nav-item" href="explore.html"><i class="fas fa-compass"></i>Explore</a>  
+        <a class="nav-item active" href="books.html"><i class="fas fa-book"></i>E-Books</a>  
+        <a class="nav-item" href="my-learning.html"><i class="fas fa-book-open"></i>My Learning</a>  
+        <a class="nav-item" href="community.html"><i class="fas fa-users"></i>Community</a>  
+        <a class="nav-item" href="profile.html"><i class="fas fa-user"></i>Profile</a>  
+    </nav>  
+
+    <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">  
+        <header>  
+            <a href="index.html" class="header-brand">MDA Mustafa Digital Academy</a>  
+            <div>
+                <a href="profile.html" style="color:var(--text-muted); font-size:20px; text-decoration:none;"><i class="fas fa-user-circle"></i></a>
+            </div>  
+        </header>  
+
+        <main id="main-content">  
+            <!-- لائف ٹائم پی ڈی ایف پیکیج کارڈ -->
+            <div class="premium-package-box">  
+                <h3>Lifetime PDF Access</h3>  
+                <p>Unlock all premium E-Books for a one-time payment.</p>  
+                <h2 style="margin-bottom:12px;" id="books-package-price">Rs 0</h2>  
+                <button class="btn btn-warning" id="btn-buy-pdf-pkg" style="color:#000; width:100%; font-weight:bold;">Buy Lifetime Access</button>  
+            </div>  
+
+            <h3 style="margin-bottom: 16px;">Library</h3>  
+            <div id="books-list" class="grid-cards"></div>  
+        </main>  
+    </div>  
+</div>  
+
+<!-- چیک آؤٹ موڈل -->
+<div id="modal-checkout" class="modal-overlay">  
+    <div class="modal-content">  
+        <div class="modal-header">  
+            <h3>Unlock E-Book / Package</h3>  
+            <button class="close-modal" onclick="closeTopModal()">&times;</button>  
+        </div>  
+        <div class="modal-body">  
+            <div id="checkout-item-info" style="margin-bottom:16px; padding:12px; background:var(--bg-color); border-radius:8px;"></div>  
+            <div id="checkout-account-details" style="background:#FFFBEB; border:1px solid #FDE68A; padding:12px; border-radius:8px; margin-bottom:16px; font-size:13px; line-height: 1.5;"></div>  
+            <div class="input-group">
+                <label>Payment Method</label>
+                <select id="checkout-method">
+                    <option value="easypaisa">EasyPaisa</option>
+                    <option value="jazzcash">JazzCash</option>
+                    <option value="bank">Bank Transfer</option>
+                </select>
+            </div>  
+            <div class="input-group">
+                <label>Transaction ID (TID)</label>
+                <input type="text" id="checkout-tid" required placeholder="e.g. 1234567890">
+            </div>  
+            <div class="input-group">
+                <label>Payment Screenshot</label>
+                <input type="file" id="checkout-screenshot" accept="image/*" required>
+            </div>  
+            <button class="btn btn-primary" id="btn-submit-payment" style="width:100%; padding:14px;">Submit Payment</button>  
+        </div>  
+    </div>  
+</div>  
+
+<script type="module">
+    import { auth, db, ref, onValue, get, set, push, onAuthStateChanged } from "./js/firebase-config.js";
+    import { showToast, showLoader, hideLoader, openModal, closeTopModal, playFullscreenVideo, convertGDriveDownloadLink, copyToClipboard } from "./js/common.js";
+    import { resolveImageUrl, setImgBbKey, uploadToImgBB } from "./js/img-uploader.js";
+
+    let currentUser = null;
+    let allPdfBooks = [];
+    let pdfPackagePrice = 0;
+    let hasLifetimePdfAccess = false;
+    let pdfAccessList = {};
+    let adminBankDetails = { bankName: 'EasyPaisa / JazzCash / Bank', holderName: 'Nazim Mustafa', accountNumber: '03105784772' };
+    let activeItemContext = null;
+
+    showLoader();
+
+    onAuthStateChanged(auth, async (user) => {
+        currentUser = user;
+        if(user) {
+            const uSnap = await get(ref(db, `users/${user.uid}`));
+            if(uSnap.exists()) hasLifetimePdfAccess = uSnap.val().lifetimePdfAccess === true;
+
+            const pAccessSnap = await get(ref(db, `pdf_access/${user.uid}`));
+            if(pAccessSnap.exists()) pdfAccessList = pAccessSnap.val();
+        }
+        renderBooksLibrary();
+    });
+
+    onValue(ref(db, 'settings'), (snap) => {
+        if(snap.exists()) {
+            const data = snap.val();
+            setImgBbKey(data.imgbb_api_key || "");
+            pdfPackagePrice = data.pdf_package_price || 0;
+            if(data.admin_bank) adminBankDetails = data.admin_bank;
+            document.getElementById('books-package-price').innerText = `Rs ${pdfPackagePrice}`;
+        }
+    });
+
+    onValue(ref(db, 'pdf_books'), (snap) => {
+        allPdfBooks = [];
+        if(snap.exists()) {
+            snap.forEach(c => allPdfBooks.push({ id: c.key, ...c.val() }));
+        }
+        renderBooksLibrary();
+        hideLoader();
+    }, () => hideLoader());
+
+    function renderBooksLibrary() {
+        const list = document.getElementById('books-list');
+        if(!list) return;
+
+        if(allPdfBooks.length === 0) {
+            list.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:var(--text-muted);">No books available yet.</p>';
+            return;
+        }
+
+        list.innerHTML = allPdfBooks.map(b => {
+            const img = resolveImageUrl(b.thumbnail, 'book');
+            const badge = b.type === 'free' ? '<span class="badge badge-free">Free PDF</span>' : '<span class="badge badge-pdf">Premium PDF</span>';
+            const priceText = b.type === 'free' ? 'Free' : `Rs ${b.price}`;
+            const hasAccess = hasLifetimePdfAccess || (pdfAccessList && pdfAccessList[b.id]);
+            const actionText = (b.type === 'free' || hasAccess) ? 'Read' : 'Unlock';
+
+            return `
+                <div class="card">
+                    <img class="card-img card-img-pdf" src="${img}" alt="Cover" onclick="window.openPdfBook('${b.id}')">
+                    <div class="card-body">
+                        <div onclick="window.openPdfBook('${b.id}')" style="cursor:pointer;">
+                            <div style="margin-bottom:6px;">${badge}</div>
+                            <div class="card-title">${b.title}</div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                            <span class="card-price">${priceText}</span>
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn btn-primary btn-sm" onclick="window.openPdfBook('${b.id}')">${actionText}</button>
+                                ${(b.type === 'free' || hasAccess) ? `<a href="${convertGDriveDownloadLink(b.url)}" target="_blank" class="btn btn-outline btn-sm" title="Download PDF"><i class="fas fa-download"></i></a>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    window.openPdfBook = function(bookId) {
+        if(!currentUser) {
+            showToast("Please login to read books", "warning");
+            setTimeout(() => window.location.href = 'login.html', 1000);
+            return;
+        }
+
+        const book = allPdfBooks.find(b => b.id === bookId);
+        if(!book) return;
+
+        if(book.type === 'paid' && !hasLifetimePdfAccess && !(pdfAccessList && pdfAccessList[bookId])) {
+            activeItemContext = { id: book.id, title: book.title, price: book.price, type: 'pdf', instructorId: 'admin' };
+            triggerCheckout(activeItemContext);
+            return;
+        }
+
+        playFullscreenVideo(book.url);
+    };
+
+    document.getElementById('btn-buy-pdf-pkg').addEventListener('click', () => {
+        if(!currentUser) {
+            showToast("Please login first", "warning");
+            setTimeout(() => window.location.href = 'login.html', 1000);
+            return;
+        }
+
+        if(hasLifetimePdfAccess) {
+            showToast("You already have Lifetime PDF Access!", "info");
+            return;
+        }
+
+        activeItemContext = { id: 'LIFETIME_PDF', title: 'Lifetime PDF Package', price: pdfPackagePrice, type: 'package', instructorId: 'admin' };
+        triggerCheckout(activeItemContext);
+    });
+
+    function triggerCheckout(context) {
+        document.getElementById('checkout-item-info').innerHTML = `<strong>Item:</strong> ${context.title}<br><strong>Amount:</strong> Rs ${context.price}`;
+        const accBox = document.getElementById('checkout-account-details');
+        accBox.innerHTML = `
+            <strong>${adminBankDetails.bankName}</strong><br>
+            Account Holder: <strong>${adminBankDetails.holderName}</strong><br>
+            Account Number: <strong>${adminBankDetails.accountNumber}</strong>
+            <button class="copy-btn" onclick="window.copyToClipboard('${adminBankDetails.accountNumber}')"><i class="fas fa-copy"></i> Copy</button><br><br>
+            Please transfer the exact amount and upload transaction screenshot.
+        `;
+        openModal('modal-checkout');
+    }
+
+    document.getElementById('btn-submit-payment').addEventListener('click', async () => {
+        const tid = document.getElementById('checkout-tid').value.trim();
+        if(!tid) { showToast("Please enter Transaction ID", "warning"); return; }
+
+        showLoader();
+        try {
+            const imgUrl = await uploadToImgBB('checkout-screenshot');
+            if(!imgUrl) { hideLoader(); return; }
+
+            await set(push(ref(db, 'payment_requests')), {
+                uid: currentUser.uid,
+                email: currentUser.email,
+                itemId: activeItemContext.id,
+                itemName: activeItemContext.title,
+                itemType: activeItemContext.type,
+                instructorId: 'admin',
+                method: document.getElementById('checkout-method').value,
+                transactionId: tid,
+                screenshotUrl: imgUrl,
+                status: 'pending',
+                amount: activeItemContext.price,
+                timestamp: Date.now()
+            });
+
+            showToast("Payment submitted! Waiting for Admin approval.", "success");
+            closeTopModal();
+            document.getElementById('checkout-tid').value = '';
+            document.getElementById('checkout-screenshot').value = '';
+        } catch(e) {
+            showToast("Payment submission failed", "error");
+        }
+        hideLoader();
+    });
+</script>
+</body>
+</html>
