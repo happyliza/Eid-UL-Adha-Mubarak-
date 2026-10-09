@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MDA - Course Details</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="global-loader"><div class="spinner"></div><div style="margin-top:10px;font-weight:500;">Loading...</div></div>  
+<div id="toast-container"></div>  
+
+<div id="app-container">  
+    <nav id="bottom-nav">  
+        <a class="nav-item" href="index.html"><i class="fas fa-home"></i>Home</a>  
+        <a class="nav-item" href="explore.html"><i class="fas fa-compass"></i>Explore</a>  
+        <a class="nav-item" href="books.html"><i class="fas fa-book"></i>E-Books</a>  
+        <a class="nav-item" href="my-learning.html"><i class="fas fa-book-open"></i>My Learning</a>  
+        <a class="nav-item" href="community.html"><i class="fas fa-users"></i>Community</a>  
+        <a class="nav-item" href="profile.html"><i class="fas fa-user"></i>Profile</a>  
+    </nav>  
+
+    <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">  
+        <header>  
+            <a href="index.html" class="header-brand">MDA Mustafa Digital Academy</a>  
+            <a href="index.html" style="color:var(--text-muted); font-size:14px; text-decoration:none;"><i class="fas fa-arrow-left"></i> Back</a>  
+        </header>  
+
+        <main id="main-content">  
+            <div id="course-details-content"></div>  
+        </main>  
+    </div>  
+</div>  
+
+<!-- چیک آؤٹ موڈل -->
+<div id="modal-checkout" class="modal-overlay">  
+    <div class="modal-content">  
+        <div class="modal-header">  
+            <h3>Course Checkout</h3>  
+            <button class="close-modal" onclick="closeTopModal()">&times;</button>  
+        </div>  
+        <div class="modal-body">  
+            <div id="checkout-item-info" style="margin-bottom:16px; padding:12px; background:var(--bg-color); border-radius:8px;"></div>  
+            <div id="checkout-payment-section">  
+                <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Payment Instructions:</p>  
+                <div id="checkout-account-details" style="background:#FFFBEB; border:1px solid #FDE68A; padding:12px; border-radius:8px; margin-bottom:16px; font-size:13px; line-height: 1.5;"></div>  
+                <div class="input-group">
+                    <label>Payment Method</label>
+                    <select id="checkout-method">
+                        <option value="easypaisa">EasyPaisa</option>
+                        <option value="jazzcash">JazzCash</option>
+                        <option value="bank">Bank Transfer</option>
+                    </select>
+                </div>  
+                <div class="input-group">
+                    <label>Transaction ID (TID)</label>
+                    <input type="text" id="checkout-tid" required placeholder="e.g. 1234567890">
+                </div>  
+                <div class="input-group">
+                    <label>Payment Screenshot</label>
+                    <input type="file" id="checkout-screenshot" accept="image/*" required>
+                </div>  
+            </div>  
+            <button class="btn btn-primary" id="btn-submit-payment" style="width:100%; padding:14px;">Submit Payment</button>  
+        </div>  
+    </div>  
+</div>  
+
+<script type="module">
+    import { auth, db, ref, get, set, push, onValue, onAuthStateChanged, ADMIN_EMAIL } from "./js/firebase-config.js";
+    import { showToast, showLoader, hideLoader, openModal, closeTopModal, copyToClipboard } from "./js/common.js";
+    import { resolveImageUrl, setImgBbKey, uploadToImgBB } from "./js/img-uploader.js";
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const courseId = urlParams.get('id');
+    const bannerDiscount = Number(urlParams.get('discount')) || 0;
+
+    let currentUser = null;
+    let currentCourse = null;
+    let finalCalculatedPrice = 0;
+    let teacherBankAccounts = {};
+    let adminBankDetails = { bankName: 'EasyPaisa / JazzCash / Bank', holderName: 'Nazim Mustafa', accountNumber: '03105784772' };
+
+    showLoader();
+
+    onAuthStateChanged(auth, (user) => {
+        currentUser = user;
+        loadCourseDetails();
+    });
+
+    onValue(ref(db, 'settings'), (snap) => {
+        if(snap.exists()) {
+            const data = snap.val();
+            setImgBbKey(data.imgbb_api_key || "");
+            if(data.admin_bank) adminBankDetails = data.admin_bank;
+        }
+    });
+
+    onValue(ref(db, 'teacher_bank_accounts'), (snap) => {
+        teacherBankAccounts = snap.exists() ? snap.val() : {};
+    });
+
+    async function loadCourseDetails() {
+        if(!courseId) {
+            document.getElementById('course-details-content').innerHTML = '<p>No course selected.</p>';
+            hideLoader();
+            return;
+        }
+
+        try {
+            const snap = await get(ref(db, `courses/${courseId}`));
+            if(!snap.exists()) {
+                document.getElementById('course-details-content').innerHTML = '<p>Course not found.</p>';
+                hideLoader();
+                return;
+            }
+            currentCourse = { id: snap.key, ...snap.val() };
+            renderDetails();
+        } catch(e) {
+            document.getElementById('course-details-content').innerHTML = '<p>Error loading course.</p>';
+        }
+        hideLoader();
+    }
+
+    async function renderDetails() {
+        const container = document.getElementById('course-details-content');
+        let isOwned = false;
+
+        if (currentUser) {
+            const uSnap = await get(ref(db, `users/${currentUser.uid}`));
+            const hasAllCourses = uSnap.exists() && uSnap.val().lifetimeAllCoursesAccess === true;
+            const accessSnap = await get(ref(db, `course_access/${currentUser.uid}/${courseId}`));
+            isOwned = hasAllCourses || (accessSnap.exists() && accessSnap.val().status === 'active');
+        }
+
+        finalCalculatedPrice = Number(currentCourse.price);
+        let discountMsg = "";
+
+        if (bannerDiscount > 0 && currentCourse.type !== 'free') {
+            finalCalculatedPrice = Math.round(finalCalculatedPrice - (finalCalculatedPrice * (bannerDiscount / 100)));
+            discountMsg = `<div style="background:#FEE2E2; color:#991B1B; padding:8px; border-radius:6px; font-size:12px; margin-bottom:12px; font-weight:bold;"><i class="fas fa-tag"></i> Special Offer: ${bannerDiscount}% Additional Discount Applied!</div>`;
+        }
+
+        const isAdmin = currentUser && currentUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+        const isAuthor = currentUser && currentCourse.instructorId === currentUser.uid;
+
+        let actionHtml = '';
+        if (isOwned || isAdmin || isAuthor) {
+            actionHtml = `<button class="btn btn-secondary" style="width:100%; padding:14px;" onclick="window.location.href='lessons.html?id=${currentCourse.id}'"><i class="fas fa-play-circle"></i> Open Course Lessons</button>`;
+        } else if(currentCourse.type === 'free') {
+            actionHtml = `<button class="btn btn-primary" style="width:100%; padding:14px;" id="btn-enroll-free">Enroll for Free</button>`;
+        } else {
+            actionHtml = `<button class="btn btn-primary" style="width:100%; padding:14px;" id="btn-open-checkout">Enroll Now - Rs ${finalCalculatedPrice}</button>`;
+        }
+
+        let priceDisplay = currentCourse.type === 'free' ? 'Free' : `Rs ${finalCalculatedPrice}`;
+        if(currentCourse.type !== 'free' && currentCourse.originalPrice && Number(currentCourse.originalPrice) > finalCalculatedPrice) {
+            priceDisplay = `<span style="text-decoration:line-through; color:var(--text-muted); font-size:14px; margin-right:8px;">Rs ${currentCourse.originalPrice}</span> <span style="color:var(--primary); font-weight:bold;">Rs ${finalCalculatedPrice}</span>`;
+        }
+
+        const img = resolveImageUrl(currentCourse.thumbnail, 'course');
+        container.innerHTML = `
+            <img src="${img}" style="width:100%; height:220px; object-fit:cover; border-radius:12px; margin-bottom:16px;">
+            <div style="margin-bottom:8px;">${currentCourse.type === 'free' ? '<span class="badge badge-free">Free Course</span>' : '<span class="badge">Paid Course</span>'}</div>
+            <h2 style="margin-bottom:6px;">${currentCourse.title}</h2>
+            <div class="instructor-name">Instructor: ${currentCourse.instructorName || 'Mustafa Digital Academy'} <i class="fas fa-check-circle" style="color:var(--blue-tick);"></i></div>
+            ${discountMsg}
+            <p style="font-weight:700; margin-bottom: 16px; font-size:18px;">${priceDisplay}</p>
+            <div style="margin-bottom:24px; line-height:1.6; font-size:14px; color:var(--text-muted);">${currentCourse.description}</div>
+            ${actionHtml}
+        `;
+
+        const freeBtn = document.getElementById('btn-enroll-free');
+        if(freeBtn) {
+            freeBtn.addEventListener('click', async () => {
+                if(!currentUser) {
+                    showToast("Please login first", "warning");
+                    setTimeout(() => window.location.href = 'login.html', 1000);
+                    return;
+                }
+                showLoader();
+                try {
+                    await set(ref(db, `course_access/${currentUser.uid}/${courseId}`), {
+                        courseId: courseId,
+                        accessType: 'lifetime',
+                        status: 'active',
+                        grantedAt: Date.now()
+                    });
+                    showToast("Successfully enrolled!", "success");
+                    loadCourseDetails();
+                } catch(e) { showToast("Failed to enroll", "error"); }
+                hideLoader();
+            });
+        }
+
+        const checkoutBtn = document.getElementById('btn-open-checkout');
+        if(checkoutBtn) {
+            checkoutBtn.addEventListener('click', () => {
+                if(!currentUser) {
+                    showToast("Please login to enroll", "warning");
+                    setTimeout(() => window.location.href = 'login.html', 1000);
+                    return;
+                }
+
+                document.getElementById('checkout-item-info').innerHTML = `<strong>Course:</strong> ${currentCourse.title}<br><strong>Total Amount:</strong> Rs ${finalCalculatedPrice}`;
+                const accBox = document.getElementById('checkout-account-details');
+                const instId = currentCourse.instructorId;
+
+                if(instId && instId !== 'admin' && teacherBankAccounts[instId]) {
+                    const acc = teacherBankAccounts[instId];
+                    accBox.innerHTML = `
+                        <strong>${acc.bankName}</strong><br>
+                        Account Holder: <strong>${acc.holderName}</strong><br>
+                        Account/IBAN: <strong>${acc.accountNumber}</strong>
+                        <button class="copy-btn" onclick="window.copyToClipboard('${acc.accountNumber}')"><i class="fas fa-copy"></i> Copy</button><br><br>
+                        Please transfer the exact amount and upload transaction screenshot.
+                    `;
+                } else {
+                    accBox.innerHTML = `
+                        <strong>${adminBankDetails.bankName}</strong><br>
+                        Account Holder: <strong>${adminBankDetails.holderName}</strong><br>
+                        Account Number: <strong>${adminBankDetails.accountNumber}</strong>
+                        <button class="copy-btn" onclick="window.copyToClipboard('${adminBankDetails.accountNumber}')"><i class="fas fa-copy"></i> Copy</button><br><br>
+                        Please transfer the exact amount and upload transaction screenshot.
+                    `;
+                }
+
+                openModal('modal-checkout');
+            });
+        }
+    }
+
+    document.getElementById('btn-submit-payment').addEventListener('click', async () => {
+        const tid = document.getElementById('checkout-tid').value.trim();
+        if(!tid) { showToast("Please enter Transaction ID", "warning"); return; }
+
+        showLoader();
+        try {
+            const imgUrl = await uploadToImgBB('checkout-screenshot');
+            if(!imgUrl) { hideLoader(); return; }
+
+            await set(push(ref(db, 'payment_requests')), {
+                uid: currentUser.uid,
+                email: currentUser.email,
+                itemId: currentCourse.id,
+                itemName: currentCourse.title,
+                itemType: 'course',
+                instructorId: currentCourse.instructorId || 'admin',
+                method: document.getElementById('checkout-method').value,
+                transactionId: tid,
+                screenshotUrl: imgUrl,
+                status: 'pending',
+                amount: finalCalculatedPrice,
+                timestamp: Date.now()
+            });
+
+            showToast("Payment submitted! Waiting for Admin approval.", "success");
+            closeTopModal();
+            document.getElementById('checkout-tid').value = '';
+            document.getElementById('checkout-screenshot').value = '';
+        } catch(e) {
+            showToast("Payment submission failed", "error");
+        }
+        hideLoader();
+    });
+</script>
+</body>
+</html>
